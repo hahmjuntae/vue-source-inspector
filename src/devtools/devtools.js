@@ -1,5 +1,5 @@
 chrome.devtools.panels.create(
-  "Vue Source Inspector",
+  "VSI",
   "src/devtools/icon.svg",
   "src/devtools/panel.html"
 );

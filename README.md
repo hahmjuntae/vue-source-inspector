@@ -1,39 +1,45 @@
 # Vue Source Inspector
 
-Reveal Vue component source files and connected style files directly from Chrome DevTools.
+Chrome DevTools에서 Vue 컴포넌트의 소스 파일과 연결된 스타일 파일을 바로 확인할 수 있는 크롬 확장 프로그램입니다.
+로컬 개발 환경에서 실행 중인 Vue 프로젝트를 대상으로 사용하는 것을 전제로 합니다.
 
 ## Demo
 
 ![Demo](demo.gif)
 
-## Features
+## 주요 기능
 
-- Inspect the nearest Vue component source for the hovered DOM element.
-- Lock the current selection with a click and clear it without leaving the panel.
-- Show matching style files from real stylesheet matches plus Vue SFC style imports.
-- Open source and style files in `VS Code`, `IntelliJ IDEA`, `Cursor`, or `Antigravity`.
-- Toggle inspection from the panel or with `Ctrl+Shift+X` / `Cmd+Shift+X`.
-- Support both Vue 2 (`__vue__`) and Vue 3 (`__vueParentComponent`, `__vnode`) heuristics.
-- Keep a lightweight on-page tooltip visible even when DevTools is not the primary focus.
+- 마우스를 올린 DOM 요소 기준으로 가장 가까운 Vue 소스 파일을 찾습니다.
+- 클릭으로 현재 선택을 고정하고, `Clear`로 바로 초기화할 수 있습니다.
+- 매칭된 스타일시트와 Vue SFC의 style import를 기준으로 스타일 파일을 보여줍니다.
+- `VS Code`, `IntelliJ IDEA`, `Cursor`, `Antigravity`에서 파일 열기를 지원합니다.
+- 패널 버튼 또는 `Ctrl+Shift+X` / `Cmd+Shift+X` 단축키로 검사 모드를 켜고 끌 수 있습니다.
+- Vue 2와 Vue 3 런타임 모두를 대상으로 동작합니다.
 
-## Installation
+## 설치
 
-1. Open `chrome://extensions`.
-2. Enable `Developer mode`.
-3. Click `Load unpacked`.
-4. Select this folder:
-   `/Users/hahmjuntae/Desktop/project/chrome-extensions/vue-inspector`
+1. Chrome에서 `chrome://extensions`를 엽니다.
+2. 우측 상단 `개발자 모드`를 켭니다.
+3. `압축해제된 확장 프로그램을 로드`를 클릭합니다.
+4. 이 저장소를 클론했거나 release ZIP을 압축 해제한 폴더를 선택합니다.
 
-## Usage
+## 사용 방법
 
-1. Open a Vue application in Chrome.
-2. Open DevTools and switch to the `Vue Source Inspector` tab.
-3. Click `Inspect`.
-4. Hover any rendered element to update the current result live.
-5. Click once to lock the current selection.
-6. Click a source or style path to open it in the selected editor.
-7. Click `Clear` to reset the current result.
+1. Vue 애플리케이션 페이지를 엽니다.
+2. DevTools를 열고 `Vue Source Inspector` 탭으로 이동합니다.
+3. `Inspect`를 누릅니다.
+4. 원하는 요소 위에 마우스를 올려 소스와 스타일 정보를 확인합니다.
+5. 클릭하면 현재 선택이 고정됩니다.
+6. 경로를 클릭하면 선택한 IDE로 파일 열기를 시도합니다.
+7. `Clear`를 누르면 현재 선택 결과를 초기화합니다.
 
-## License
+## 단축키
 
-This repository is currently marked as `UNLICENSED`.
+- `Ctrl+Shift+X` / `Cmd+Shift+X`: 검사 모드 토글
+- `Esc`: 현재 검사 종료
+
+## 참고
+
+- 개발 빌드 환경에서 가장 정확하게 동작합니다.
+- 소스 경로나 스타일 정보가 런타임에 노출되지 않는 경우 일부 파일은 찾지 못할 수 있습니다.
+- 원격 배포본이나 프로덕션 번들보다는 로컬에서 띄운 개발 서버 환경에 맞춰져 있습니다.

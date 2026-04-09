@@ -6,9 +6,7 @@ const rootDir = path.resolve(__dirname, "..");
 const filesToCheck = [
   "demo.gif",
   "CHANGELOG.md",
-  "CHAGELOG.md",
   "manifest.json",
-  "PRIVACY.md",
   "src/background.js",
   "src/assets/icons/icon-16.png",
   "src/assets/icons/icon-32.png",
