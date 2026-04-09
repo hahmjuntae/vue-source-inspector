@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VSI</title>
+    <link rel="stylesheet" href="panel.css" />
+    <script src="../shared/editor-link.js" defer></script>
+    <script src="panel.js" defer></script>
+  </head>
+  <body>
+    <main class="panel-shell">
+      <section class="topbar">
+        <div class="inspect-actions">
+          <button id="toggleInspect" class="toggle-button" type="button">
+            <span class="toggle-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false">
+                <path
+                  d="M8.25 3.5a4.75 4.75 0 1 0 0 9.5a4.75 4.75 0 0 0 0-9.5Zm0-1.5a6.25 6.25 0 1 1 0 12.5a6.25 6.25 0 0 1 0-12.5Zm5.69 10.88 3.03 3.03-1.06 1.06-3.03-3.03 1.06-1.06Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span id="toggleLabel">Inspect</span>
+          </button>
+
+          <button id="clearSelection" class="clear-button" type="button">Clear</button>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="themeToggle" class="utility-button" type="button" aria-label="Toggle theme">
+            <span class="utility-icon" aria-hidden="true" id="themeIcon">
+              <svg viewBox="0 0 20 20" focusable="false">
+                <path
+                  d="M10 3.25a.75.75 0 0 1 .75.75v1.2a.75.75 0 0 1-1.5 0V4A.75.75 0 0 1 10 3.25Zm0 10.85a.75.75 0 0 1 .75.75v1.15a.75.75 0 0 1-1.5 0v-1.15a.75.75 0 0 1 .75-.75Zm6-4.1a.75.75 0 0 1 0 1.5h-1.15a.75.75 0 0 1 0-1.5H16Zm-10.85 0a.75.75 0 0 1 0 1.5H4a.75.75 0 0 1 0-1.5h1.15ZM14.03 5.97a.75.75 0 0 1 1.06 0l.82.81a.75.75 0 1 1-1.06 1.06l-.82-.81a.75.75 0 0 1 0-1.06Zm-8.04 8.03a.75.75 0 0 1 1.06 0l.82.82a.75.75 0 0 1-1.06 1.06L5.99 15.06a.75.75 0 0 1 0-1.06Zm9.88 0a.75.75 0 0 1 0 1.06l-.82.82a.75.75 0 0 1-1.06-1.06l.82-.82a.75.75 0 0 1 1.06 0Zm-8.98-8.98a.75.75 0 0 1 0 1.06l-.82.81A.75.75 0 0 1 5 5.83l.82-.81a.75.75 0 0 1 1.06 0ZM10 6.75a3.25 3.25 0 1 1 0 6.5a3.25 3.25 0 0 1 0-6.5Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+          </button>
+
+          <button id="languageToggle" class="utility-button" type="button" aria-label="Toggle language">
+            <span class="utility-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2" />
+                <path d="M3.5 12h17M12 3.5c2.2 2.05 3.5 5.14 3.5 8.5s-1.3 6.45-3.5 8.5M12 3.5c-2.2 2.05-3.5 5.14-3.5 8.5s1.3 6.45 3.5 8.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </button>
+
+          <div class="editor-menu" id="editorMenu">
+            <button
+              id="editorMenuButton"
+              class="utility-button utility-button--editor"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded="false"
+            >
+              <span id="editorMenuCurrentIcon" class="editor-menu-current-icon" aria-hidden="true"></span>
+              <span id="editorMenuLabel">Open in editor</span>
+              <span class="utility-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path
+                    d="M11.5 4.25h4.25V8a.75.75 0 0 0 1.5 0V3.5a.75.75 0 0 0-.75-.75H12a.75.75 0 0 0 0 1.5h2.44l-5.72 5.72a.75.75 0 1 0 1.06 1.06l5.72-5.72V8a.75.75 0 0 0 1.5 0V3.5a.75.75 0 0 0-.75-.75h-4.75a.75.75 0 0 0 0 1.5Zm3.75 8.5a.75.75 0 0 1 1.5 0v2.75a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 15.5V4.75a1.5 1.5 0 0 1 1.5-1.5h2.75a.75.75 0 0 1 0 1.5H4.5v10.75h10.75v-2.75Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+            </button>
+            <div id="editorMenuPanel" class="editor-menu-panel" hidden></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="status-strip">
+        <div class="status-chip" id="statusChip" data-state="idle">Idle</div>
+        <p class="status-copy" id="statusCopy">
+          Open the target page, keep this panel visible, then enter inspect mode.
+        </p>
+      </section>
+
+      <p id="metaNote" class="meta-note">
+        Project root will be inferred automatically when an absolute file path is available.
+      </p>
+
+      <section class="results-stack">
+        <section class="card">
+          <p id="labelSource" class="section-label">Source</p>
+          <p id="componentName" class="value strong">Unavailable</p>
+          <button id="componentFileButton" class="path-action" type="button" disabled>
+            Hover a Vue-rendered element.
+          </button>
+          <p class="hint" id="openHint">
+            Click a path to open it in the selected editor.
+          </p>
+        </section>
+
+        <section class="card">
+          <p id="labelElement" class="section-label">Element</p>
+          <p id="elementValue" class="value code">No element yet</p>
+        </section>
+
+        <section class="card">
+          <div class="section-header">
+            <p id="labelStyles" class="section-label">Styles</p>
+          </div>
+          <ol id="styleCandidates" class="chain"></ol>
+        </section>
+      </section>
+
+      <footer class="panel-footer">
+        <a
+          class="repo-link"
+          href="https://github.com/hahmjuntae"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          <span class="repo-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path
+                d="M12 2C6.48 2 2 6.59 2 12.24c0 4.52 2.87 8.35 6.84 9.7c.5.1.68-.22.68-.49c0-.24-.01-1.05-.01-1.9c-2.78.62-3.37-1.2-3.37-1.2c-.46-1.19-1.11-1.5-1.11-1.5c-.91-.64.07-.63.07-.63c1 .08 1.53 1.06 1.53 1.06c.89 1.56 2.34 1.11 2.91.85c.09-.66.35-1.11.63-1.37c-2.22-.26-4.56-1.14-4.56-5.06c0-1.12.39-2.03 1.03-2.75c-.1-.26-.45-1.31.1-2.73c0 0 .84-.27 2.75 1.05A9.3 9.3 0 0 1 12 6.84c.85 0 1.71.12 2.5.36c1.9-1.32 2.74-1.05 2.74-1.05c.55 1.42.21 2.47.11 2.73c.64.72 1.03 1.63 1.03 2.75c0 3.93-2.34 4.79-4.57 5.05c.36.32.68.93.68 1.88c0 1.36-.01 2.46-.01 2.8c0 .27.18.6.69.49A10.27 10.27 0 0 0 22 12.24C22 6.59 17.52 2 12 2Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span>@hahmjuntae</span>
+        </a>
+      </footer>
+    </main>
+  </body>
+  </html>

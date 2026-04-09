@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Vue Source Inspector",
+  "description": "Hover any Vue-rendered element and surface the owning component source file.",
+  "version": "0.1.0",
+  "permissions": [
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "icons": {
+    "16": "src/assets/icons/icon-16.png",
+    "32": "src/assets/icons/icon-32.png",
+    "48": "src/assets/icons/icon-48.png",
+    "128": "src/assets/icons/icon-128.png"
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "devtools_page": "src/devtools/devtools.html",
+  "action": {
+    "default_title": "Toggle Vue Source Inspector",
+    "default_icon": {
+      "16": "src/assets/icons/icon-16.png",
+      "32": "src/assets/icons/icon-32.png"
+    }
+  }
+}

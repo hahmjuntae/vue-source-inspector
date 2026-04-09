@@ -1,0 +1,9 @@
+.DS_Store
+.omx/
+release/
+DESIGN.md
+STORE_SUBMISSION.md
+
+# Local editor and OS noise
+.idea/
+.vscode/

@@ -1,0 +1,12 @@
+{
+  "name": "vue-source-inspector-extension",
+  "private": true,
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "description": "Dependency-free Chrome extension that maps hovered Vue DOM nodes to component source files.",
+  "scripts": {
+    "lint": "node scripts/verify.js",
+    "static": "node scripts/verify.js",
+    "test": "node --test"
+  }
+}
