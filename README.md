@@ -18,6 +18,8 @@ This extension is designed for Vue projects running in a local development envir
 
 ## Installation
 
+Download the latest packaged extension from [Releases](https://github.com/hahmjuntae/vue-source-inspector/releases/latest), then unzip it locally.
+
 1. Open `chrome://extensions` in Chrome.
 2. Enable `Developer mode`.
 3. Click `Load unpacked`.
