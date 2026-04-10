@@ -116,6 +116,7 @@
   const editorOptions = [
     { kind: "vscode", label: "VS Code", iconClass: "editor-option-icon--vscode" },
     { kind: "intellij", label: "IntelliJ IDEA", iconClass: "editor-option-icon--intellij" },
+    { kind: "webstorm", label: "WebStorm", iconClass: "editor-option-icon--webstorm" },
     { kind: "cursor", label: "Cursor", iconClass: "editor-option-icon--cursor" },
     { kind: "antigravity", label: "Antigravity", iconClass: "editor-option-icon--antigravity" }
   ];

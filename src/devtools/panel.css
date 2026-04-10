@@ -319,6 +319,11 @@ body {
   mask-image: url("./assets/editor-icons/intellij.svg");
 }
 
+.editor-option-icon--webstorm {
+  -webkit-mask-image: url("./assets/editor-icons/webstorm.svg");
+  mask-image: url("./assets/editor-icons/webstorm.svg");
+}
+
 .editor-option-icon--cursor {
   -webkit-mask-image: url("./assets/editor-icons/cursor-dark.svg");
   mask-image: url("./assets/editor-icons/cursor-dark.svg");

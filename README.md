@@ -12,7 +12,7 @@ This extension is designed for Vue projects running in a local development envir
 - Find the nearest Vue source file for the hovered DOM element.
 - Lock the current selection with a click and reset it with `Clear`.
 - Show matched style files based on real stylesheet matches and Vue SFC style imports.
-- Open source and style files in `VS Code`, `IntelliJ IDEA`, `Cursor`, or `Antigravity`.
+- Open source and style files in `VS Code`, `IntelliJ IDEA`, `WebStorm`, `Cursor`, or `Antigravity`.
 - Toggle inspection from the panel or with `Ctrl+Shift+X` / `Cmd+Shift+X`.
 - Support both Vue 2 and Vue 3 runtime heuristics.
 

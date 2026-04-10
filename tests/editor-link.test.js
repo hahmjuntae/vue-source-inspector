@@ -37,6 +37,20 @@ test("buildEditorTarget creates IntelliJ links", () => {
   );
 });
 
+test("buildEditorTarget creates WebStorm links", () => {
+  const target = editorLink.buildEditorTarget({
+    projectRoot: "/Users/hahmjuntae/workspace/app",
+    filePath: "/src/views/home/index.vue",
+    editorKind: "webstorm"
+  });
+
+  assert.equal(target.ok, true);
+  assert.equal(
+    target.url,
+    "webstorm://open?file=%2FUsers%2Fhahmjuntae%2Fworkspace%2Fapp%2Fsrc%2Fviews%2Fhome%2Findex.vue"
+  );
+});
+
 test("buildEditorTarget validates missing project root", () => {
   const target = editorLink.buildEditorTarget({
     projectRoot: "",

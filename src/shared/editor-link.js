@@ -78,6 +78,8 @@
       url = "vscode://file" + encodedPath;
     } else if (editorKind === "intellij") {
       url = "idea://open?file=" + encodeURIComponent(absolutePath);
+    } else if (editorKind === "webstorm") {
+      url = "webstorm://open?file=" + encodeURIComponent(absolutePath);
     } else if (editorKind === "cursor") {
       url = "cursor://file" + encodedPath;
     } else if (editorKind === "antigravity") {

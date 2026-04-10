@@ -20,6 +20,7 @@ const filesToCheck = [
   "src/devtools/assets/editor-icons/cursor-light.svg",
   "src/devtools/assets/editor-icons/intellij.svg",
   "src/devtools/assets/editor-icons/vscode.svg",
+  "src/devtools/assets/editor-icons/webstorm.svg",
   "src/devtools/assets/fonts/geist-mono/GeistMono-Variable.woff2",
   "src/devtools/assets/fonts/geist-sans/Geist-Variable.woff2",
   "src/devtools/panel.css",
