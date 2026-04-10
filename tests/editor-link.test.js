@@ -23,6 +23,20 @@ test("buildEditorTarget creates VS Code protocol links", () => {
   );
 });
 
+test("buildEditorTarget creates Windows VS Code protocol links", () => {
+  const target = editorLink.buildEditorTarget({
+    projectRoot: "C:/workspace/app",
+    filePath: "/src/views/home/index.vue",
+    editorKind: "vscode"
+  });
+
+  assert.equal(target.ok, true);
+  assert.equal(
+    target.url,
+    "vscode://file/C:/workspace/app/src/views/home/index.vue"
+  );
+});
+
 test("buildEditorTarget creates IntelliJ links", () => {
   const target = editorLink.buildEditorTarget({
     projectRoot: "/Users/hahmjuntae/workspace/app",

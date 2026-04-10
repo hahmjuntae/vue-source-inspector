@@ -71,7 +71,7 @@
       };
     }
 
-    const encodedPath = encodeURI(absolutePath);
+    const encodedPath = encodeURI(toEditorProtocolPath(absolutePath));
     let url = "";
 
     if (editorKind === "vscode") {
@@ -101,11 +101,20 @@
     };
   }
 
+  function toEditorProtocolPath(absolutePath) {
+    if (!absolutePath || typeof absolutePath !== "string") {
+      return "";
+    }
+
+    return /^[a-zA-Z]:\//.test(absolutePath) ? "/" + absolutePath : absolutePath;
+  }
+
   const api = {
     normalizeFilePath,
     normalizeProjectRoot,
     joinProjectPath,
-    buildEditorTarget
+    buildEditorTarget,
+    toEditorProtocolPath
   };
 
   globalScope.VueSourceInspectorEditorLink = api;
