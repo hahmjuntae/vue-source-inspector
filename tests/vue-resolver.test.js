@@ -342,11 +342,172 @@ test("inspectFromElement prefers active tab view over shell route", () => {
   const payload = resolver.inspectFromElement(target);
 
   assert.equal(payload.status, "resolved");
-  assert.equal(payload.primaryComponent.name, "buyers-manages-list");
-  assert.equal(payload.primaryComponent.file, "/src/views/desktop/buyers/manages/list/index.vue");
+  assert.equal(payload.primaryComponent.name, "FbLayoutTabPage");
+  assert.equal(
+    payload.primaryComponent.file,
+    "/src/components/desktop/layouts/layout/fb-layout-tab-page.vue"
+  );
+  assert.equal(payload.nearestComponent.name, "FbLayoutTabPage");
+  assert.equal(payload.parentComponent, null);
+  assert.equal(payload.pageComponent.name, "buyers-manages-list");
+  assert.equal(payload.pageComponent.file, "/src/views/desktop/buyers/manages/list/index.vue");
   assert.deepEqual(
     payload.componentChain.map((entry) => entry.name),
     ["FbLayoutTabPage", "AppRoot"]
+  );
+});
+
+test("inspectFromElement keeps nested form components over route fallback", () => {
+  const appRoot = {
+    uid: 1,
+    type: {
+      name: "AppRoot",
+      __file: "/Users/hahmjuntae/workspace/app/src/App.vue"
+    },
+    parent: null
+  };
+
+  const layoutPage = {
+    uid: 2,
+    type: {
+      name: "FbLayoutTabPage",
+      __file: "/Users/hahmjuntae/workspace/app/src/components/desktop/layouts/layout/fb-layout-tab-page.vue"
+    },
+    parent: appRoot,
+    proxy: {
+      $router: {
+        getRoutes() {
+          return [
+            {
+              name: "promotions-coupon-list",
+              meta: {
+                component: {
+                  index: () => import("../../views/desktop/promotions/coupon/list/index.vue")
+                }
+              }
+            }
+          ];
+        },
+        currentRoute: {
+          value: {
+            name: "dashboard",
+            meta: {
+              component: {
+                index: () => import("../../views/desktop/main/index.vue")
+              }
+            }
+          }
+        }
+      },
+      pageTabList: [
+        {
+          name: "promotions-coupon-list",
+          active: true
+        }
+      ]
+    }
+  };
+
+  const formRow = {
+    uid: 3,
+    type: {
+      name: "FbFormRow",
+      __file: "/Users/hahmjuntae/workspace/app/src/components/desktop/layouts/form/fb-form-row.vue"
+    },
+    parent: layoutPage
+  };
+
+  const target = {
+    tagName: "DD",
+    className: "fb__search-item__cont",
+    parentNode: null,
+    __vueParentComponent: formRow
+  };
+
+  const payload = resolver.inspectFromElement(target);
+
+  assert.equal(payload.status, "resolved");
+  assert.equal(payload.primaryComponent.name, "FbFormRow");
+  assert.equal(payload.primaryComponent.file, "/src/components/desktop/layouts/form/fb-form-row.vue");
+  assert.deepEqual(
+    payload.componentChain.map((entry) => entry.name),
+    ["FbFormRow", "FbLayoutTabPage", "AppRoot"]
+  );
+});
+
+test("inspectFromElement prefers page view over top-level search layout shells", () => {
+  const appRoot = {
+    uid: 1,
+    type: {
+      name: "AppRoot",
+      __file: "/Users/hahmjuntae/workspace/app/src/App.vue"
+    },
+    parent: null
+  };
+
+  const searchLayout = {
+    uid: 2,
+    type: {
+      name: "FbSearchLayout",
+      __file: "/Users/hahmjuntae/workspace/app/src/components/desktop/layouts/search/fb-search-layout.vue"
+    },
+    parent: appRoot,
+    proxy: {
+      $router: {
+        getRoutes() {
+          return [
+            {
+              name: "promotions-coupon-list",
+              meta: {
+                component: {
+                  index: () => import("../../views/desktop/promotions/coupon/list/index.vue")
+                }
+              }
+            }
+          ];
+        },
+        currentRoute: {
+          value: {
+            name: "dashboard",
+            meta: {
+              component: {
+                index: () => import("../../views/desktop/main/index.vue")
+              }
+            }
+          }
+        }
+      },
+      pageTabList: [
+        {
+          name: "promotions-coupon-list",
+          active: true
+        }
+      ]
+    }
+  };
+
+  const target = {
+    tagName: "DIV",
+    className: "content-padding fb__search-layout manages-list",
+    parentNode: null,
+    __vueParentComponent: searchLayout
+  };
+
+  const payload = resolver.inspectFromElement(target);
+
+  assert.equal(payload.status, "resolved");
+  assert.equal(payload.primaryComponent.name, "FbSearchLayout");
+  assert.equal(
+    payload.primaryComponent.file,
+    "/src/components/desktop/layouts/search/fb-search-layout.vue"
+  );
+  assert.equal(payload.nearestComponent.name, "FbSearchLayout");
+  assert.equal(payload.parentComponent, null);
+  assert.equal(payload.pageComponent.name, "promotions-coupon-list");
+  assert.equal(payload.pageComponent.file, "/src/views/desktop/promotions/coupon/list/index.vue");
+  assert.deepEqual(
+    payload.componentChain.map((entry) => entry.name),
+    ["FbSearchLayout", "AppRoot"]
   );
 });
 

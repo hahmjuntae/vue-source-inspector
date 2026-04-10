@@ -86,10 +86,7 @@
       <section class="results-stack">
         <section class="card">
           <p id="labelSource" class="section-label">Source</p>
-          <p id="componentName" class="value strong">Unavailable</p>
-          <button id="componentFileButton" class="path-action" type="button" disabled>
-            Hover a Vue-rendered element.
-          </button>
+          <div id="sourceHighlights" class="source-highlights"></div>
           <p class="hint" id="openHint">
             Click a path to open it in the selected editor.
           </p>
@@ -97,7 +94,13 @@
 
         <section class="card">
           <p id="labelElement" class="section-label">Element</p>
-          <p id="elementValue" class="value code">No element yet</p>
+          <div class="element-panel">
+            <div class="element-summary">
+              <span id="elementTag" class="element-tag">div</span>
+              <p id="elementValue" class="value code element-selector">No element yet</p>
+            </div>
+            <div id="elementDetails" class="element-details"></div>
+          </div>
         </section>
 
         <section class="card">

@@ -483,6 +483,22 @@ body {
   margin-bottom: 12px;
 }
 
+.source-highlights {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.source-empty {
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  box-shadow: var(--ring-shadow);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .chain {
   margin: 0;
   padding: 0;
@@ -498,7 +514,20 @@ body {
   box-shadow: var(--ring-shadow);
 }
 
-.chain button {
+.source-tile {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  box-shadow: var(--ring-shadow);
+  text-align: left;
+  cursor: pointer;
+}
+
+.chain-button {
   appearance: none;
   -webkit-appearance: none;
   width: 100%;
@@ -510,6 +539,18 @@ body {
   cursor: pointer;
 }
 
+.source-tile:hover:not(:disabled),
+.chain-button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .source-tile:hover:not(:disabled),
+:root[data-theme="dark"] .chain-button:hover:not(:disabled) {
+  background: #2a2a2a;
+  color: #fafafa;
+}
+
 .chain-empty {
   padding: 14px 16px;
   color: var(--muted);
@@ -517,13 +558,123 @@ body {
   line-height: 1.5;
 }
 
+.component-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.component-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.component-badge--nearest {
+  background: rgba(0, 114, 245, 0.12);
+  color: #005ad1;
+}
+
+.component-badge--parent {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.component-badge--page {
+  background: rgba(168, 85, 247, 0.14);
+  color: #7e22ce;
+}
+
+:root[data-theme="dark"] .component-badge--nearest {
+  background: rgba(106, 169, 255, 0.16);
+  color: #9ec4ff;
+}
+
+:root[data-theme="dark"] .component-badge--parent {
+  background: rgba(74, 222, 128, 0.16);
+  color: #86efac;
+}
+
+:root[data-theme="dark"] .component-badge--page {
+  background: rgba(216, 180, 254, 0.16);
+  color: #d8b4fe;
+}
+
+.component-name,
 .chain-name {
   margin: 0 0 6px;
   font-weight: 700;
 }
 
+.component-file,
 .chain-file {
   margin: 0;
+}
+
+.element-panel {
+  margin-top: 12px;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  box-shadow: var(--ring-shadow);
+}
+
+.element-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.element-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(0, 114, 245, 0.12);
+  color: #005ad1;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: lowercase;
+}
+
+.element-selector {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.element-details {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.element-meta {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  box-shadow: var(--ring-shadow);
+  word-break: break-word;
+}
+
+:root[data-theme="dark"] .element-tag {
+  background: rgba(106, 169, 255, 0.16);
+  color: #9ec4ff;
 }
 
 .meta-note[data-tone="error"] {

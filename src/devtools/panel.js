@@ -31,9 +31,10 @@
     labelElement: document.getElementById("labelElement"),
     labelStyles: document.getElementById("labelStyles"),
     metaNote: document.getElementById("metaNote"),
+    elementTag: document.getElementById("elementTag"),
     elementValue: document.getElementById("elementValue"),
-    componentName: document.getElementById("componentName"),
-    componentFileButton: document.getElementById("componentFileButton"),
+    elementDetails: document.getElementById("elementDetails"),
+    sourceHighlights: document.getElementById("sourceHighlights"),
     styleCandidates: document.getElementById("styleCandidates"),
     openHint: document.getElementById("openHint")
   };
@@ -64,6 +65,9 @@
       statusInspecting: "Move the mouse over the page, then click once to lock the current component result.",
       statusSelected: "Selection is locked. Click Inspect to resume live hover tracking.",
       source: "Source",
+      nearest: "Nearest",
+      parent: "Parent",
+      page: "Page",
       element: "Element",
       styles: "Styles",
       openInEditor: "Open in editor",
@@ -73,6 +77,9 @@
       unavailable: "Unavailable",
       noReasonYet: "No inspection result yet.",
       hoverElement: "Hover a Vue-rendered element.",
+      noComponents: "No Vue source metadata yet.",
+      classLabel: 'class="',
+      idLabel: 'id="',
       openHintReady: "Click a path to open it in the selected editor.",
       openHintUnavailable: "A path is required to open the file.",
       noStyles: "No SCSS candidates could be inferred from this source file.",
@@ -99,6 +106,9 @@
       statusInspecting: "페이지 위에서 마우스를 움직이고, 원하는 순간 한 번 클릭해 결과를 고정하세요.",
       statusSelected: "선택이 고정되었습니다. 다시 실시간 추적하려면 검사 버튼을 누르세요.",
       source: "소스",
+      nearest: "가장 가까운 컴포넌트",
+      parent: "부모 컴포넌트",
+      page: "페이지 엔트리",
       element: "요소",
       styles: "스타일",
       openInEditor: "에디터에서 열기",
@@ -108,6 +118,9 @@
       unavailable: "확인 불가",
       noReasonYet: "아직 검사 결과가 없습니다.",
       hoverElement: "Vue로 렌더링된 요소 위에 마우스를 올려보세요.",
+      noComponents: "아직 노출된 Vue 소스 메타데이터가 없습니다.",
+      classLabel: 'class="',
+      idLabel: 'id="',
       openHintReady: "경로를 클릭하면 선택한 에디터로 열기를 시도합니다.",
       openHintUnavailable: "파일 경로가 있어야 열 수 있습니다.",
       noStyles: "이 소스 파일 기준으로 추론할 수 있는 SCSS 후보가 없습니다.",
@@ -210,16 +223,6 @@
     clearSelectionView();
   });
 
-  elements.componentFileButton.addEventListener("click", () => {
-    const primary = state.lastPayload && state.lastPayload.primaryComponent
-      ? state.lastPayload.primaryComponent
-      : null;
-
-    if (primary && primary.file) {
-      openInEditor(primary.file);
-    }
-  });
-
   elements.themeToggle.addEventListener("click", onThemeToggle);
   elements.languageToggle.addEventListener("click", onLanguageToggle);
   elements.editorMenuButton.addEventListener("click", onEditorMenuToggle);
@@ -259,8 +262,8 @@
   function renderInspection(payload) {
     state.lastPayload = payload;
     const element = payload.element || {};
-    const primaryComponent = payload.primaryComponent || {};
     const loadedStyles = Array.isArray(payload.styles) ? payload.styles : [];
+    const sourceLayers = buildSourceLayers(payload);
 
     const inferredRoot = inferProjectRootFromPayload(payload);
     if (inferredRoot) {
@@ -268,13 +271,9 @@
       chrome.storage.local.set({ vsiInferredProjectRoot: inferredRoot }).catch(() => {});
     }
 
-    elements.elementValue.textContent = element.selector || "unknown";
-    elements.componentName.textContent = primaryComponent.file
-      ? getFileName(primaryComponent.file)
-      : t("unavailable");
-    elements.componentFileButton.textContent = primaryComponent.file || t("hoverElement");
-    elements.componentFileButton.disabled = !primaryComponent.file;
-    elements.openHint.textContent = primaryComponent.file
+    renderElementDetails(element);
+    renderSourceHighlights(sourceLayers);
+    elements.openHint.textContent = sourceLayers.length
       ? t("openHintReady")
       : t("openHintUnavailable");
 
@@ -294,10 +293,8 @@
 
   function clearSelectionView() {
     state.lastPayload = null;
-    elements.elementValue.textContent = t("noElement");
-    elements.componentName.textContent = t("unavailable");
-    elements.componentFileButton.textContent = t("hoverElement");
-    elements.componentFileButton.disabled = true;
+    renderElementDetails(null);
+    renderSourceHighlights([]);
     elements.openHint.textContent = t("openHintReady");
     renderStyleCandidates([]);
     renderStatus();
@@ -434,9 +431,8 @@
     elements.editorMenuButton.setAttribute("aria-label", t("editorMenuAria"));
 
     if (!state.lastPayload) {
-      elements.elementValue.textContent = t("noElement");
-      elements.componentName.textContent = t("unavailable");
-      elements.componentFileButton.textContent = t("hoverElement");
+      renderElementDetails(null);
+      renderSourceHighlights([]);
       elements.openHint.textContent = t("openHintReady");
       renderStyleCandidates([]);
     }
@@ -654,6 +650,7 @@
       const item = document.createElement("li");
       const button = document.createElement("button");
       button.type = "button";
+      button.className = "chain-button";
       button.addEventListener("click", () => {
         openInEditor(candidate.absolutePath || candidate.path);
       });
@@ -763,6 +760,18 @@
       candidates.push(payload.primaryComponent);
     }
 
+    if (payload && payload.nearestComponent) {
+      candidates.push(payload.nearestComponent);
+    }
+
+    if (payload && payload.parentComponent) {
+      candidates.push(payload.parentComponent);
+    }
+
+    if (payload && payload.pageComponent) {
+      candidates.push(payload.pageComponent);
+    }
+
     if (payload && Array.isArray(payload.componentChain)) {
       candidates.push(...payload.componentChain);
     }
@@ -778,6 +787,141 @@
     }
 
     return "";
+  }
+
+  function renderSourceHighlights(layers) {
+    elements.sourceHighlights.replaceChildren();
+
+    if (!layers.length) {
+      const empty = document.createElement("div");
+      empty.className = "source-empty";
+      empty.textContent = t("noComponents");
+      elements.sourceHighlights.appendChild(empty);
+      return;
+    }
+
+    for (const layer of layers) {
+      const button = createComponentButton(layer.component, layer.kinds, "source-tile");
+      elements.sourceHighlights.appendChild(button);
+    }
+  }
+
+  function renderElementDetails(element) {
+    elements.elementValue.textContent = element && element.selector ? element.selector : t("noElement");
+    elements.elementTag.textContent = element && element.tagName ? element.tagName : "div";
+    elements.elementDetails.replaceChildren();
+
+    if (!element || (!element.className && !element.id)) {
+      return;
+    }
+
+    if (element.className) {
+      elements.elementDetails.appendChild(
+        createElementMetaRow(t("classLabel") + element.className + '"')
+      );
+    }
+
+    if (element.id) {
+      elements.elementDetails.appendChild(
+        createElementMetaRow(t("idLabel") + element.id + '"')
+      );
+    }
+  }
+
+  function createElementMetaRow(value) {
+    const row = document.createElement("p");
+    row.className = "element-meta code muted";
+    row.textContent = value;
+    return row;
+  }
+
+  function createComponentButton(component, kinds, className) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className;
+    button.disabled = !component || !component.file;
+
+    if (component && component.file) {
+      button.addEventListener("click", () => {
+        openInEditor(component.file);
+      });
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "component-meta";
+
+    for (const kind of kinds || []) {
+      const badge = document.createElement("span");
+      badge.className = "component-badge component-badge--" + normalizeKindForClass(kind);
+      badge.textContent = kind.label;
+      meta.appendChild(badge);
+    }
+
+    const name = document.createElement("p");
+    name.className = "component-name";
+    name.textContent = component && component.file ? getFileName(component.file) : t("unavailable");
+
+    const file = document.createElement("p");
+    file.className = "component-file code muted";
+    file.textContent = component && component.file ? component.file : t("hoverElement");
+
+    button.append(meta, name, file);
+    return button;
+  }
+
+  function buildSourceLayers(payload) {
+    const layers = [];
+    pushComponentLayer(layers, payload && payload.nearestComponent, {
+      key: "nearest",
+      label: t("nearest")
+    });
+    pushComponentLayer(layers, payload && payload.parentComponent, {
+      key: "parent",
+      label: t("parent")
+    });
+    pushComponentLayer(layers, payload && payload.pageComponent, {
+      key: "page",
+      label: t("page")
+    });
+    return layers;
+  }
+
+  function pushComponentLayer(target, component, ...kinds) {
+    if (!component || !component.file) {
+      return;
+    }
+
+    const key = getComponentKey(component);
+    const existing = target.find((entry) => getComponentKey(entry.component) === key);
+    if (existing) {
+      for (const kind of kinds) {
+        if (kind && !existing.kinds.some((existingKind) => existingKind.key === kind.key)) {
+          existing.kinds.push(kind);
+        }
+      }
+      return;
+    }
+
+    target.push({
+      component,
+      kinds: kinds.filter(Boolean)
+    });
+  }
+
+  function normalizeKindForClass(kind) {
+    if (!kind || typeof kind !== "object" || typeof kind.key !== "string") {
+      return "default";
+    }
+
+    return kind.key.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  }
+
+  function getComponentKey(component) {
+    if (!component || typeof component !== "object") {
+      return "";
+    }
+
+    return component.absoluteFile || component.file || component.name || "";
   }
 
   function inferProjectRoot(absoluteFile, displayFile) {

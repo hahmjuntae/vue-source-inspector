@@ -11,6 +11,9 @@
         framework: null,
         element: elementSummary,
         primaryComponent: null,
+        nearestComponent: null,
+        parentComponent: null,
+        pageComponent: null,
         componentChain: [],
         styles: []
       };
@@ -32,6 +35,9 @@
       framework: null,
       element: elementSummary,
       primaryComponent: null,
+      nearestComponent: null,
+      parentComponent: null,
+      pageComponent: null,
       componentChain: [],
       styles: []
     };
@@ -301,7 +307,16 @@
 
   function finalizePayload(input) {
     const chain = input.chain.filter(Boolean);
-    const primaryComponent = choosePrimaryComponent(chain, input.routeComponent);
+    const nearestComponent = chooseNearestComponent(chain);
+    const pageComponent = choosePageComponent(chain, input.routeComponent);
+    const parentComponent = chooseParentComponent(chain, nearestComponent, pageComponent);
+    const primaryComponent =
+      nearestComponent ||
+      pageComponent ||
+      parentComponent ||
+      chain.find((entry) => entry && entry.file) ||
+      chain[0] ||
+      null;
 
     return {
       status: primaryComponent ? "resolved" : "unresolved",
@@ -309,55 +324,98 @@
       framework: input.framework,
       element: summarizeElement(input.element),
       primaryComponent,
+      nearestComponent,
+      parentComponent,
+      pageComponent,
       componentChain: chain,
       styles: []
     };
   }
 
-  function choosePrimaryComponent(chain, routeComponent) {
+  function chooseNearestComponent(chain) {
     if (!Array.isArray(chain) || !chain.length) {
-      return routeComponent || null;
+      return null;
     }
 
     const candidatesWithFile = chain.filter((entry) => entry && entry.file);
     if (!candidatesWithFile.length) {
-      return routeComponent || chain[0] || null;
+      return chain[0] || null;
     }
 
     const nearest = candidatesWithFile[0];
-    const preferredChainEntry = isWrapperLikeComponent(nearest)
+    return isWrapperLikeComponent(nearest)
       ? candidatesWithFile.find((entry) => !isWrapperLikeComponent(entry)) || nearest
       : nearest;
+  }
 
-    if (shouldPreferRouteComponent(preferredChainEntry, routeComponent)) {
+  function chooseParentComponent(chain, nearestComponent, pageComponent) {
+    if (!Array.isArray(chain) || !chain.length || !nearestComponent) {
+      return null;
+    }
+
+    const nearestKey = getComponentKey(nearestComponent);
+    const pageKey = getComponentKey(pageComponent);
+    let passedNearest = false;
+
+    for (const entry of chain) {
+      if (!entry || !entry.file) {
+        continue;
+      }
+
+      const key = getComponentKey(entry);
+      if (!passedNearest) {
+        if (key === nearestKey) {
+          passedNearest = true;
+        }
+        continue;
+      }
+
+      if (key === nearestKey || key === pageKey) {
+        continue;
+      }
+
+      if (isWrapperLikeComponent(entry) || isAppRootComponent(entry)) {
+        continue;
+      }
+
+      return entry;
+    }
+
+    return null;
+  }
+
+  function choosePageComponent(chain, routeComponent) {
+    if (routeComponent && routeComponent.file) {
       return routeComponent;
     }
 
-    return preferredChainEntry;
+    if (!Array.isArray(chain) || !chain.length) {
+      return null;
+    }
+
+    return chain.find((entry) => entry && entry.file && isPageEntryFile(entry.file)) || null;
   }
 
-  function shouldPreferRouteComponent(primaryComponent, routeComponent) {
-    if (!routeComponent || !routeComponent.file) {
+  function getComponentKey(entry) {
+    if (!entry || typeof entry !== "object") {
+      return "";
+    }
+
+    return entry.absoluteFile || entry.file || entry.name || "";
+  }
+
+  function isPageEntryFile(file) {
+    return typeof file === "string" && file.startsWith("/src/views/");
+  }
+
+  function isAppRootComponent(entry) {
+    if (!entry || typeof entry !== "object") {
       return false;
     }
 
-    if (!primaryComponent || !primaryComponent.file) {
-      return true;
-    }
-
-    if (routeComponent.file === primaryComponent.file) {
-      return false;
-    }
-
-    if (isLayoutLikeComponent(primaryComponent) && routeComponent.file.startsWith("/src/views/")) {
-      return true;
-    }
-
-    if (isWrapperLikeComponent(primaryComponent) && routeComponent.file.startsWith("/src/views/")) {
-      return true;
-    }
-
-    return false;
+    const file = typeof entry.file === "string" ? entry.file : "";
+    const name = normalizeComponentIdentity(entry.name);
+    return file.endsWith("/src/App.vue") || name === "approot";
   }
 
   function isLayoutLikeComponent(entry) {
@@ -368,13 +426,23 @@
     const file = typeof entry.file === "string" ? entry.file : "";
     const name = normalizeComponentIdentity(entry.name);
 
-    if (file.includes("/layouts/") || file.endsWith("/middleware.vue")) {
+    if (
+      file.endsWith("/middleware.vue") ||
+      file.includes("/layouts/layout/") ||
+      file.includes("/layouts/header/") ||
+      file.includes("/layouts/lnb/") ||
+      file.endsWith("/src/App.vue")
+    ) {
       return true;
     }
 
-    return ["layout", "pagetabcontent", "layouttabpage", "middleware"].some((token) =>
-      name.includes(token)
-    );
+    return [
+      "layouttabpage",
+      "layoutstandard",
+      "pagetabcontent",
+      "middleware",
+      "approot"
+    ].some((token) => name.includes(token));
   }
 
   function isWrapperLikeComponent(entry) {
@@ -1017,17 +1085,23 @@
   function summarizeElement(element) {
     if (!element || typeof element !== "object") {
       return {
-        selector: "unknown"
+        selector: "unknown",
+        id: "",
+        className: ""
       };
     }
 
     const tagName = element.tagName ? String(element.tagName).toLowerCase() : "unknown";
-    const id = element.id ? "#" + element.id : "";
+    const idValue = element.id ? String(element.id).trim() : "";
+    const id = idValue ? "#" + idValue : "";
     const classNames = extractClassNames(element);
     const classSuffix = classNames.length ? "." + classNames.join(".") : "";
 
     return {
-      selector: tagName + id + classSuffix
+      selector: tagName + id + classSuffix,
+      tagName,
+      id: idValue,
+      className: classNames.join(" ")
     };
   }
 

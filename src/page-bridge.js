@@ -63,11 +63,43 @@
 
     const payload = resolver.inspectFromElement(target);
     const matchedStyles = resolver.collectMatchedStyleFiles(document, target);
-    const sourceImports =
-      payload.primaryComponent && payload.primaryComponent.file
-        ? await resolver.collectComponentStyleImports(payload.primaryComponent.file)
-        : [];
+    const sourceFiles = collectSourceFiles(payload);
+    const sourceImportLists = await Promise.all(
+      sourceFiles.map((filePath) => resolver.collectComponentStyleImports(filePath))
+    );
+    const sourceImports = sourceImportLists.flat();
     payload.styles = matchedStyles.concat(sourceImports);
     emitResponse(requestId, payload);
+  }
+
+  function collectSourceFiles(payload) {
+    const seen = new Set();
+    const files = [];
+
+    const push = (component) => {
+      if (!component || typeof component.file !== "string" || !component.file) {
+        return;
+      }
+
+      if (seen.has(component.file)) {
+        return;
+      }
+
+      seen.add(component.file);
+      files.push(component.file);
+    };
+
+    push(payload && payload.nearestComponent);
+    push(payload && payload.parentComponent);
+    push(payload && payload.pageComponent);
+    push(payload && payload.primaryComponent);
+
+    if (payload && Array.isArray(payload.componentChain)) {
+      for (const component of payload.componentChain) {
+        push(component);
+      }
+    }
+
+    return files;
   }
 })();

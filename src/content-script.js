@@ -317,7 +317,12 @@
       return;
     }
 
-    const primary = payload && payload.primaryComponent ? payload.primaryComponent : null;
+    const primary =
+      payload && payload.nearestComponent
+        ? payload.nearestComponent
+        : payload && payload.primaryComponent
+          ? payload.primaryComponent
+          : null;
     state.tooltipValue.textContent =
       primary && primary.file ? primary.file : "No Vue source metadata";
     state.tooltip.style.display = "block";
