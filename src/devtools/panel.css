@@ -527,6 +527,13 @@ body {
   cursor: pointer;
 }
 
+.source-tile[data-highlighted="true"] {
+  box-shadow:
+    0 0 0 2px rgba(0, 114, 245, 0.22),
+    var(--ring-shadow);
+  animation: sourceTilePulse 1.2s ease;
+}
+
 .chain-button {
   appearance: none;
   -webkit-appearance: none;
@@ -549,6 +556,12 @@ body {
 :root[data-theme="dark"] .chain-button:hover:not(:disabled) {
   background: #2a2a2a;
   color: #fafafa;
+}
+
+:root[data-theme="dark"] .source-tile[data-highlighted="true"] {
+  box-shadow:
+    0 0 0 2px rgba(106, 169, 255, 0.28),
+    var(--ring-shadow);
 }
 
 .chain-empty {
@@ -593,6 +606,11 @@ body {
   color: #7e22ce;
 }
 
+.component-badge--element {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
 :root[data-theme="dark"] .component-badge--nearest {
   background: rgba(106, 169, 255, 0.16);
   color: #9ec4ff;
@@ -608,10 +626,29 @@ body {
   color: #d8b4fe;
 }
 
+:root[data-theme="dark"] .component-badge--element {
+  background: rgba(251, 191, 36, 0.18);
+  color: #fcd34d;
+}
+
 .component-name,
 .chain-name {
   margin: 0 0 6px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+@keyframes sourceTilePulse {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.01);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .component-file,
@@ -627,30 +664,11 @@ body {
   box-shadow: var(--ring-shadow);
 }
 
-.element-summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.element-tag {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 5px 9px;
-  background: rgba(0, 114, 245, 0.12);
-  color: #005ad1;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  text-transform: lowercase;
-}
-
 .element-selector {
   font-size: 18px;
   font-weight: 600;
   line-height: 1.4;
+  margin-top: 2px;
 }
 
 .element-details {
@@ -670,11 +688,6 @@ body {
   background: var(--surface);
   box-shadow: var(--ring-shadow);
   word-break: break-word;
-}
-
-:root[data-theme="dark"] .element-tag {
-  background: rgba(106, 169, 255, 0.16);
-  color: #9ec4ff;
 }
 
 .meta-note[data-tone="error"] {

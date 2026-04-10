@@ -10,13 +10,16 @@
 
   const REQUEST_EVENT = "__VSI_REQUEST__";
   const RESPONSE_EVENT = "__VSI_RESPONSE__";
+  const OPEN_EDITOR_EVENT = "__VSI_OPEN_EDITOR__";
   const resolver = window.VueSourceInspectorResolver;
 
   if (!resolver) {
     window.addEventListener(REQUEST_EVENT, onMissingResolverRequest, true);
+    window.addEventListener(OPEN_EDITOR_EVENT, onOpenEditorRequest, true);
     window.__VUE_SOURCE_INSPECTOR_PAGE_BRIDGE_CONTROLLER__ = {
       teardown() {
         window.removeEventListener(REQUEST_EVENT, onMissingResolverRequest, true);
+        window.removeEventListener(OPEN_EDITOR_EVENT, onOpenEditorRequest, true);
         delete window.__VUE_SOURCE_INSPECTOR_PAGE_BRIDGE_CONTROLLER__;
       }
     };
@@ -24,9 +27,11 @@
   }
 
   window.addEventListener(REQUEST_EVENT, onInspectRequest, true);
+  window.addEventListener(OPEN_EDITOR_EVENT, onOpenEditorRequest, true);
   window.__VUE_SOURCE_INSPECTOR_PAGE_BRIDGE_CONTROLLER__ = {
     teardown() {
       window.removeEventListener(REQUEST_EVENT, onInspectRequest, true);
+      window.removeEventListener(OPEN_EDITOR_EVENT, onOpenEditorRequest, true);
       delete window.__VUE_SOURCE_INSPECTOR_PAGE_BRIDGE_CONTROLLER__;
     }
   };
@@ -48,6 +53,38 @@
       status: "error",
       reason: "resolver-unavailable"
     });
+  }
+
+  function onOpenEditorRequest(event) {
+    const detail = event && event.detail ? event.detail : {};
+    const url = typeof detail.url === "string" ? detail.url : "";
+    if (!url) {
+      return;
+    }
+
+    try {
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.rel = "noopener noreferrer";
+      anchor.style.display = "none";
+      document.documentElement.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch (_error) {
+      // Ignore anchor fallback errors.
+    }
+
+    try {
+      const frame = document.createElement("iframe");
+      frame.style.display = "none";
+      frame.src = url;
+      document.documentElement.appendChild(frame);
+      setTimeout(() => {
+        frame.remove();
+      }, 1200);
+    } catch (_error) {
+      // Ignore iframe fallback errors.
+    }
   }
 
   async function onInspectRequest(event) {

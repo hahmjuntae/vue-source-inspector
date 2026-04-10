@@ -9,8 +9,9 @@ This extension is designed for Vue projects running in a local development envir
 
 ## Features
 
-- Find the nearest Vue source file for the hovered DOM element.
-- Lock the current selection with a click and reset it with `Clear`.
+- Show layered Vue source results with clickable `Nearest`, `Parent`, and `Page` entries.
+- Lock the current on-page source popup with a click and close it with `Clear`, `Esc`, or the popup close button.
+- Keep the DevTools panel connected across temporary extension background restarts.
 - Show matched style files based on real stylesheet matches and Vue SFC style imports.
 - Open source and style files in `VS Code`, `IntelliJ IDEA`, `WebStorm`, `Cursor`, or `Antigravity`.
 - Toggle inspection from the panel or with `Ctrl+Shift+X` / `Cmd+Shift+X`.
@@ -20,16 +21,7 @@ This extension is designed for Vue projects running in a local development envir
 
 Choose one of these installation flows:
 
-### Option 1: Install from Releases
-
-Download the latest packaged extension from [Releases](https://github.com/hahmjuntae/vue-source-inspector/releases/latest), then unzip it locally.
-
-1. Open `chrome://extensions` in Chrome.
-2. Enable `Developer mode`.
-3. Click `Load unpacked`.
-4. Select the folder you cloned from this repository or extracted from the release ZIP.
-
-### Option 2: Install directly from the repository
+### Option 1: Install directly from the repository
 
 If you want to keep the unpacked extension up to date with `git pull`, load the repository root itself.
 
@@ -41,6 +33,15 @@ If you want to keep the unpacked extension up to date with `git pull`, load the 
 
 For example, if you cloned into `~/workspace/vue-source-inspector`, select that folder directly.
 Do not select a parent folder that does not contain `manifest.json` at its root.
+
+### Option 2: Install from Releases
+
+Download the latest packaged extension from [Releases](https://github.com/hahmjuntae/vue-source-inspector/releases/latest), then unzip it locally.
+
+1. Open `chrome://extensions` in Chrome.
+2. Enable `Developer mode`.
+3. Click `Load unpacked`.
+4. Select the folder you extracted from the release ZIP.
 
 ## Updating a local clone
 
@@ -58,10 +59,11 @@ After pulling, open `chrome://extensions` and click `Reload` for this unpacked e
 1. Open a Vue application in Chrome.
 2. Open DevTools and switch to the `VSI` tab.
 3. Click `Inspect`.
-4. Hover any rendered element to update the current result live.
-5. Click once to lock the current selection.
-6. Click a source or style path to open it in the selected editor.
-7. Click `Clear` to reset the current selection.
+4. Hover any rendered element to update the current result live and preview the on-page source popup.
+5. Click once to lock the current selection and keep the on-page popup visible.
+6. In the `Source` section, use the layered `Nearest`, `Parent`, and `Page` entries to open the right file in the selected editor.
+7. Click a style path to open the matching stylesheet in the selected editor.
+8. Click `Clear` or press `Esc` to reset the current selection.
 
 ## Shortcuts
 

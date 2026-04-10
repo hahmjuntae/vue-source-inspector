@@ -14,6 +14,7 @@
   const queuedMessages = [];
 
   const elements = {
+    sourceCard: document.getElementById("sourceCard"),
     toggleButton: document.getElementById("toggleInspect"),
     toggleLabel: document.getElementById("toggleLabel"),
     clearSelection: document.getElementById("clearSelection"),
@@ -43,6 +44,7 @@
     enabled: false,
     desiredEnabled: false,
     lastPayload: null,
+    highlightedSourceKey: "",
     editorMenuOpen: false,
     inferredProjectRoot: "",
     settings: {
@@ -53,6 +55,7 @@
   };
 
   let saveTimer = 0;
+  let sourceHighlightTimer = 0;
   const messages = {
     en: {
       inspect: "Inspect",
@@ -90,6 +93,7 @@
       saveError: (error) => "Failed to save settings: " + error,
       openError: "This page doesn't expose an absolute file path, so editor open can't be linked automatically.",
       openSuccess: (filePath) => "Tried opening the editor. The path was copied too: " + filePath,
+      popupCopied: "Copied from popup. Open it from the Source section.",
       reconnecting: "DevTools connection lost. Reconnecting automatically...",
       themeAria: (theme) => theme === "dark" ? "Switch to light mode" : "Switch to dark mode",
       languageAria: "Toggle language",
@@ -131,6 +135,7 @@
       saveError: (error) => "설정 저장에 실패했습니다: " + error,
       openError: "이 페이지는 절대 파일 경로를 노출하지 않아 editor open을 자동 연결할 수 없습니다.",
       openSuccess: (filePath) => "에디터 실행을 시도했고, 경로도 복사했습니다: " + filePath,
+      popupCopied: "팝업에서 경로를 복사했습니다. Source 섹션에서 열어주세요.",
       reconnecting: "DevTools 연결이 끊어졌습니다. 자동으로 다시 연결하는 중입니다...",
       themeAria: (theme) => theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환",
       languageAria: "언어 전환",
@@ -202,6 +207,21 @@
 
     if (message.type === "VSI_PANEL_ERROR") {
       renderError(message.message || "Unknown error");
+      return;
+    }
+
+    if (message.type === "VSI_PANEL_OPEN_EDITOR") {
+      if (message.filePath) {
+        openInEditor(message.filePath);
+      }
+      return;
+    }
+
+    if (message.type === "VSI_PANEL_FOCUS_SOURCE") {
+      if (message.sourceKey) {
+        flashSourceHighlight(message.sourceKey);
+        renderSettingsMessage(t("popupCopied"), "info");
+      }
     }
   }
 
@@ -839,6 +859,7 @@
     const button = document.createElement("button");
     button.type = "button";
     button.className = className;
+    button.dataset.highlighted = String(getComponentKey(component) === state.highlightedSourceKey);
     button.disabled = !component || !component.file;
 
     if (component && component.file) {
@@ -922,6 +943,32 @@
     }
 
     return component.absoluteFile || component.file || component.name || "";
+  }
+
+  function flashSourceHighlight(sourceKey) {
+    state.highlightedSourceKey = sourceKey;
+    if (state.lastPayload) {
+      renderSourceHighlights(buildSourceLayers(state.lastPayload));
+    }
+
+    if (elements.sourceCard && typeof elements.sourceCard.scrollIntoView === "function") {
+      elements.sourceCard.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth"
+      });
+    }
+
+    if (sourceHighlightTimer) {
+      clearTimeout(sourceHighlightTimer);
+    }
+
+    sourceHighlightTimer = setTimeout(() => {
+      sourceHighlightTimer = 0;
+      state.highlightedSourceKey = "";
+      if (state.lastPayload) {
+        renderSourceHighlights(buildSourceLayers(state.lastPayload));
+      }
+    }, 1400);
   }
 
   function inferProjectRoot(absoluteFile, displayFile) {

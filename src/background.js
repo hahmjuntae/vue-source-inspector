@@ -124,6 +124,43 @@
         type: "VSI_PANEL_STATE",
         enabled: state.enabled
       });
+      return;
+    }
+
+    if (
+      message.type === "VSI_SELECTION_CLEARED" &&
+      sender.tab &&
+      typeof sender.tab.id === "number"
+    ) {
+      clearSelection(sender.tab.id);
+      return;
+    }
+
+    if (
+      message.type === "VSI_OPEN_EDITOR_REQUEST" &&
+      sender.tab &&
+      typeof sender.tab.id === "number"
+    ) {
+      triggerEditorOpen(sender.tab.id, message.url || "").catch((error) => {
+        console.error("[VSI] Failed to trigger editor open from background", error);
+      });
+      postToTab(sender.tab.id, {
+        type: "VSI_PANEL_OPEN_EDITOR",
+        filePath: message.filePath || ""
+      });
+      return;
+    }
+
+    if (
+      message.type === "VSI_FOCUS_SOURCE_REQUEST" &&
+      sender.tab &&
+      typeof sender.tab.id === "number"
+    ) {
+      postToTab(sender.tab.id, {
+        type: "VSI_PANEL_FOCUS_SOURCE",
+        sourceKey: message.sourceKey || ""
+      });
+      return;
     }
   });
 
@@ -136,7 +173,7 @@
 
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ["src/content-script.js"]
+      files: ["src/shared/editor-link.js", "src/content-script.js"]
     });
   }
 
@@ -290,6 +327,43 @@
     await chrome.action.setBadgeText({
       tabId,
       text: enabled ? "ON" : ""
+    });
+  }
+
+  async function triggerEditorOpen(tabId, url) {
+    if (!url) {
+      return;
+    }
+
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      func: (targetUrl) => {
+        try {
+          const anchor = document.createElement("a");
+          anchor.href = targetUrl;
+          anchor.rel = "noopener noreferrer";
+          anchor.style.display = "none";
+          document.documentElement.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+        } catch (_error) {
+          // Ignore anchor fallback errors.
+        }
+
+        try {
+          const frame = document.createElement("iframe");
+          frame.style.display = "none";
+          frame.src = targetUrl;
+          document.documentElement.appendChild(frame);
+          setTimeout(() => {
+            frame.remove();
+          }, 1200);
+        } catch (_error) {
+          // Ignore iframe fallback errors.
+        }
+      },
+      args: [url]
     });
   }
 })();
