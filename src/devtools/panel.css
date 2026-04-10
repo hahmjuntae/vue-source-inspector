@@ -690,6 +690,72 @@ body {
   word-break: break-word;
 }
 
+.debug-panel {
+  margin: 0;
+}
+
+.debug-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.debug-summary::-webkit-details-marker {
+  display: none;
+}
+
+.debug-copy {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--ring-shadow);
+}
+
+.debug-copy:hover {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.debug-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.debug-item {
+  display: grid;
+  gap: 4px;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--surface-muted);
+  box-shadow: var(--ring-shadow);
+}
+
+.debug-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.debug-value {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
 .meta-note[data-tone="error"] {
   color: var(--danger-text);
 }

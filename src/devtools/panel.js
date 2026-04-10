@@ -31,13 +31,16 @@
     labelSource: document.getElementById("labelSource"),
     labelElement: document.getElementById("labelElement"),
     labelStyles: document.getElementById("labelStyles"),
+    labelDebug: document.getElementById("labelDebug"),
     metaNote: document.getElementById("metaNote"),
     elementTag: document.getElementById("elementTag"),
     elementValue: document.getElementById("elementValue"),
     elementDetails: document.getElementById("elementDetails"),
     sourceHighlights: document.getElementById("sourceHighlights"),
     styleCandidates: document.getElementById("styleCandidates"),
-    openHint: document.getElementById("openHint")
+    openHint: document.getElementById("openHint"),
+    copyDebug: document.getElementById("copyDebug"),
+    debugInfo: document.getElementById("debugInfo")
   };
 
   const state = {
@@ -73,6 +76,9 @@
       page: "Page",
       element: "Element",
       styles: "Styles",
+      debug: "Debug",
+      copy: "Copy",
+      copied: "Copied.",
       openInEditor: "Open in editor",
       setDefaultIde: "Set default IDE",
       clear: "Clear",
@@ -115,6 +121,9 @@
       page: "페이지 엔트리",
       element: "요소",
       styles: "스타일",
+      debug: "디버그",
+      copy: "복사",
+      copied: "복사됨",
       openInEditor: "에디터에서 열기",
       setDefaultIde: "기본 IDE 설정",
       clear: "지우기",
@@ -242,6 +251,7 @@
     });
     clearSelectionView();
   });
+  elements.copyDebug.addEventListener("click", onCopyDebug);
 
   elements.themeToggle.addEventListener("click", onThemeToggle);
   elements.languageToggle.addEventListener("click", onLanguageToggle);
@@ -300,6 +310,7 @@
     renderRootStatus();
     renderStatus();
     renderStyleCandidates(loadedStyles);
+    renderDebugInfo(payload);
   }
 
   function renderError(message) {
@@ -317,6 +328,7 @@
     renderSourceHighlights([]);
     elements.openHint.textContent = t("openHintReady");
     renderStyleCandidates([]);
+    renderDebugInfo(null);
     renderStatus();
   }
 
@@ -445,6 +457,8 @@
     elements.labelSource.textContent = t("source");
     elements.labelElement.textContent = t("element");
     elements.labelStyles.textContent = t("styles");
+    elements.labelDebug.textContent = t("debug");
+    elements.copyDebug.textContent = t("copy");
     renderEditorMenuButton();
     elements.themeToggle.setAttribute("aria-label", t("themeAria", state.settings.theme));
     elements.languageToggle.setAttribute("aria-label", t("languageAria"));
@@ -455,6 +469,7 @@
       renderSourceHighlights([]);
       elements.openHint.textContent = t("openHintReady");
       renderStyleCandidates([]);
+      renderDebugInfo(null);
     }
   }
 
@@ -823,6 +838,67 @@
     for (const layer of layers) {
       const button = createComponentButton(layer.component, layer.kinds, "source-tile");
       elements.sourceHighlights.appendChild(button);
+    }
+  }
+
+  function renderDebugInfo(payload) {
+    elements.debugInfo.replaceChildren();
+
+    const lines = buildDebugLines(payload);
+    for (const line of lines) {
+      const item = document.createElement("div");
+      item.className = "debug-item";
+
+      const label = document.createElement("p");
+      label.className = "debug-label";
+      label.textContent = line.label;
+
+      const value = document.createElement("p");
+      value.className = "debug-value code";
+      value.textContent = line.value || "-";
+
+      item.append(label, value);
+      elements.debugInfo.appendChild(item);
+    }
+  }
+
+  function buildDebugLines(payload) {
+    const primary =
+      payload && payload.nearestComponent
+        ? payload.nearestComponent
+        : payload && payload.primaryComponent
+          ? payload.primaryComponent
+          : null;
+
+    const editorTarget = primary && primary.file
+      ? editorLink.buildEditorTarget({
+          projectRoot: state.inferredProjectRoot,
+          filePath: primary.absoluteFile || primary.file,
+          editorKind: state.settings.editorKind
+        })
+      : null;
+
+    return [
+      { label: "projectRoot", value: state.inferredProjectRoot || "" },
+      { label: "displayPath", value: primary && primary.file ? primary.file : "" },
+      { label: "absolutePath", value: editorTarget && editorTarget.absolutePath ? editorTarget.absolutePath : "" },
+      { label: "editorKind", value: state.settings.editorKind || "" },
+      { label: "editorUrl", value: editorTarget && editorTarget.url ? editorTarget.url : "" }
+    ];
+  }
+
+  async function onCopyDebug(event) {
+    event.preventDefault();
+
+    const text = buildDebugLines(state.lastPayload)
+      .map((line) => line.label + ": " + (line.value || "-"))
+      .join("\n");
+
+    try {
+      await navigator.clipboard.writeText(text);
+      renderSettingsMessage(t("copied"), "info");
+    } catch (error) {
+      renderSettingsMessage(stringifyError(error), "error");
     }
   }
 
