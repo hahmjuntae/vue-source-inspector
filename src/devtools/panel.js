@@ -870,10 +870,11 @@
           ? payload.primaryComponent
           : null;
 
-    const editorTarget = primary && primary.file
+    const openPath = getComponentOpenPath(primary);
+    const editorTarget = openPath
       ? editorLink.buildEditorTarget({
           projectRoot: state.inferredProjectRoot,
-          filePath: primary.absoluteFile || primary.file,
+          filePath: openPath,
           editorKind: state.settings.editorKind
         })
       : null;
@@ -938,9 +939,10 @@
     button.dataset.highlighted = String(getComponentKey(component) === state.highlightedSourceKey);
     button.disabled = !component || !component.file;
 
-    if (component && component.file) {
+    const openPath = getComponentOpenPath(component);
+    if (openPath) {
       button.addEventListener("click", () => {
-        openInEditor(component.file);
+        openInEditor(openPath);
       });
     }
 
@@ -1019,6 +1021,14 @@
     }
 
     return component.absoluteFile || component.file || component.name || "";
+  }
+
+  function getComponentOpenPath(component) {
+    if (!component || typeof component !== "object") {
+      return "";
+    }
+
+    return component.absoluteFile || component.file || "";
   }
 
   function flashSourceHighlight(sourceKey) {
