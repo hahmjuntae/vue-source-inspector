@@ -18,12 +18,40 @@ This extension is designed for Vue projects running in a local development envir
 
 ## Installation
 
+Choose one of these installation flows:
+
+### Option 1: Install from Releases
+
 Download the latest packaged extension from [Releases](https://github.com/hahmjuntae/vue-source-inspector/releases/latest), then unzip it locally.
 
 1. Open `chrome://extensions` in Chrome.
 2. Enable `Developer mode`.
 3. Click `Load unpacked`.
 4. Select the folder you cloned from this repository or extracted from the release ZIP.
+
+### Option 2: Install directly from the repository
+
+If you want to keep the unpacked extension up to date with `git pull`, load the repository root itself.
+
+1. Clone this repository locally.
+2. Open `chrome://extensions` in Chrome.
+3. Enable `Developer mode`.
+4. Click `Load unpacked`.
+5. Select the repository root, the folder that contains `manifest.json`:
+   `/Users/hahmjuntae/Desktop/project/chrome-extensions/vue-source-inspector`
+
+Do not select the parent `chrome-extensions` folder. Chrome expects the selected folder to contain `manifest.json` at its root.
+
+## Updating a local clone
+
+If you installed the extension from the repository root, you can update it with:
+
+```bash
+cd /Users/hahmjuntae/Desktop/project/chrome-extensions/vue-source-inspector
+git pull
+```
+
+After pulling, open `chrome://extensions` and click `Reload` for this unpacked extension. Chrome does not reliably hot-reload changed unpacked extension files on its own.
 
 ## Usage
 
