@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Fixed frequent DevTools panel disconnects by reconnecting the panel automatically after temporary background restarts.
+- Added layered source results so `Nearest`, `Parent`, and `Page` component files are all visible and openable in the selected editor.
+- Improved the inspector UI by polishing the Element card, stabilizing source badges across language modes, and restoring the Styles list layout.
+
 ## 0.1.1
 
 - Added `WebStorm` to the editor picker and open-in-editor protocol support.
