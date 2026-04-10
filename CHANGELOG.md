@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.1 - 2026-04-10
+## 0.1.1
 
 - Added `WebStorm` to the editor picker and open-in-editor protocol support.
 - Fixed Vue source resolution so active tab view files are preferred over layout shell files like `fb-layout-tab-page.vue`.
