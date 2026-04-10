@@ -74,6 +74,282 @@ test("inspectFromElement resolves nearest Vue 3 component chain", () => {
   );
 });
 
+test("inspectFromElement prefers vnode context over wrapper parent markers", () => {
+  const rootComponent = {
+    uid: 1,
+    type: {
+      name: "AppRoot",
+      __file: "/Users/hahmjuntae/workspace/app/src/App.vue"
+    },
+    parent: null
+  };
+
+  const pageComponent = {
+    uid: 2,
+    type: {
+      __name: "OrdersIndex",
+      __file: "/Users/hahmjuntae/workspace/app/src/views/orders/index.vue?t=123"
+    },
+    parent: rootComponent
+  };
+
+  const suspenseWrapper = {
+    uid: 3,
+    type: {
+      name: "FbSuspense",
+      __file: "/Users/hahmjuntae/workspace/app/src/components/async/fb-suspense.vue"
+    },
+    parent: pageComponent
+  };
+
+  const target = {
+    tagName: "DIV",
+    className: "page-shell",
+    parentNode: null,
+    __vueParentComponent: suspenseWrapper,
+    __vnode: {
+      ctx: {
+        $: pageComponent
+      }
+    }
+  };
+
+  const payload = resolver.inspectFromElement(target);
+
+  assert.equal(payload.status, "resolved");
+  assert.equal(payload.primaryComponent.name, "OrdersIndex");
+  assert.equal(payload.primaryComponent.file, "/src/views/orders/index.vue");
+});
+
+test("inspectFromElement skips wrapper-like components as primary source", () => {
+  const rootComponent = {
+    uid: 1,
+    type: {
+      name: "AppRoot",
+      __file: "/Users/hahmjuntae/workspace/app/src/App.vue"
+    },
+    parent: null
+  };
+
+  const pageComponent = {
+    uid: 2,
+    type: {
+      __name: "OrdersIndex",
+      __file: "/Users/hahmjuntae/workspace/app/src/views/orders/index.vue?t=123"
+    },
+    parent: rootComponent
+  };
+
+  const suspenseWrapper = {
+    uid: 3,
+    type: {
+      name: "FbSuspense",
+      __file: "/Users/hahmjuntae/workspace/app/src/components/async/fb-suspense.vue"
+    },
+    parent: pageComponent
+  };
+
+  const target = {
+    tagName: "DIV",
+    className: "page-shell",
+    parentNode: null,
+    __vueParentComponent: suspenseWrapper
+  };
+
+  const payload = resolver.inspectFromElement(target);
+
+  assert.equal(payload.status, "resolved");
+  assert.equal(payload.primaryComponent.name, "OrdersIndex");
+  assert.equal(payload.primaryComponent.file, "/src/views/orders/index.vue");
+  assert.deepEqual(
+    payload.componentChain.map((entry) => entry.name),
+    ["FbSuspense", "OrdersIndex", "AppRoot"]
+  );
+});
+
+test("inspectFromElement descends through layout subtree to the page component", () => {
+  const targetElement = {
+    tagName: "DIV",
+    className: "page-content",
+    parentNode: null
+  };
+
+  const appRoot = {
+    uid: 1,
+    type: {
+      name: "AppRoot",
+      __file: "/Users/hahmjuntae/workspace/app/src/App.vue"
+    },
+    parent: null
+  };
+
+  const layoutPage = {
+    uid: 2,
+    type: {
+      name: "FbLayoutTabPage",
+      __file: "/Users/hahmjuntae/workspace/app/src/components/layout/fb-layout-tab-page.vue"
+    },
+    parent: appRoot
+  };
+
+  const pageComponent = {
+    uid: 3,
+    type: {
+      __name: "OrdersIndex",
+      __file: "/Users/hahmjuntae/workspace/app/src/views/orders/index.vue?t=123"
+    },
+    parent: layoutPage
+  };
+
+  const pageRootEl = {
+    contains(node) {
+      return node === targetElement;
+    }
+  };
+
+  const layoutRootEl = {
+    contains(node) {
+      return node === targetElement || node === pageRootEl;
+    }
+  };
+
+  pageComponent.subTree = {
+    el: pageRootEl
+  };
+  pageComponent.vnode = {
+    component: pageComponent
+  };
+
+  layoutPage.subTree = {
+    el: layoutRootEl,
+    children: [
+      {
+        component: pageComponent
+      }
+    ]
+  };
+  layoutPage.vnode = {
+    component: layoutPage
+  };
+
+  appRoot.subTree = {
+    el: layoutRootEl,
+    children: [
+      {
+        component: layoutPage
+      }
+    ]
+  };
+  appRoot.vnode = {
+    component: appRoot
+  };
+
+  targetElement.__vueParentComponent = layoutPage;
+
+  const payload = resolver.inspectFromElement(targetElement);
+
+  assert.equal(payload.status, "resolved");
+  assert.equal(payload.primaryComponent.name, "OrdersIndex");
+  assert.equal(payload.primaryComponent.file, "/src/views/orders/index.vue");
+  assert.deepEqual(
+    payload.componentChain.map((entry) => entry.name),
+    ["OrdersIndex", "FbLayoutTabPage", "AppRoot"]
+  );
+});
+
+test("inspectFromElement prefers active tab view over shell route", () => {
+  const appRoot = {
+    uid: 1,
+    type: {
+      name: "AppRoot",
+      __file: "/Users/hahmjuntae/workspace/app/src/App.vue"
+    },
+    parent: null
+  };
+
+  const layoutPage = {
+    uid: 2,
+    type: {
+      name: "FbLayoutTabPage",
+      __file: "/Users/hahmjuntae/workspace/app/src/components/desktop/layouts/layout/fb-layout-tab-page.vue"
+    },
+    parent: appRoot,
+    proxy: {
+      $router: {
+        getRoutes() {
+          return [
+            {
+              name: "dashboard",
+              meta: {
+                component: {
+                  index: () => import("../../views/desktop/main/index.vue")
+                }
+              }
+            },
+            {
+              name: "buyers-manages-list",
+              meta: {
+                component: {
+                  index: () => import("../../views/desktop/buyers/manages/list/index.vue")
+                }
+              }
+            }
+          ];
+        },
+        currentRoute: {
+          value: {
+            name: "dashboard",
+            meta: {
+              component: {
+                index: () => import("../../views/desktop/main/index.vue")
+              }
+            }
+          }
+        }
+      },
+      pageTabList: [
+        {
+          name: "dashboard",
+          active: false
+        },
+        {
+          name: "buyers-manages-list",
+          active: true
+        }
+      ]
+    },
+    setupState: {
+      pageTabList: [
+        {
+          name: "dashboard",
+          active: false
+        },
+        {
+          name: "buyers-manages-list",
+          active: true
+        }
+      ]
+    }
+  };
+
+  const target = {
+    tagName: "SECTION",
+    className: "fb__page-tab__content",
+    parentNode: null,
+    __vueParentComponent: layoutPage
+  };
+
+  const payload = resolver.inspectFromElement(target);
+
+  assert.equal(payload.status, "resolved");
+  assert.equal(payload.primaryComponent.name, "buyers-manages-list");
+  assert.equal(payload.primaryComponent.file, "/src/views/desktop/buyers/manages/list/index.vue");
+  assert.deepEqual(
+    payload.componentChain.map((entry) => entry.name),
+    ["FbLayoutTabPage", "AppRoot"]
+  );
+});
+
 test("inspectFromElement resolves Vue 2 instances through __vue__", () => {
   const rootVm = {
     _uid: 10,
