@@ -2,8 +2,16 @@
   const editorLink = window.VueSourceInspectorEditorLink;
   const root = document.documentElement;
   const tabId = chrome.devtools.inspectedWindow.tabId;
-  const port = chrome.runtime.connect({ name: "VSI_DEVTOOLS_PORT" });
+  const PORT_NAME = "VSI_DEVTOOLS_PORT";
+  const RECONNECT_BASE_DELAY_MS = 400;
+  const RECONNECT_MAX_DELAY_MS = 3000;
+  let port = null;
   let portConnected = true;
+  let reconnectTimer = 0;
+  let reconnectAttempts = 0;
+  let reconnectRestoreEnabled = false;
+  let awaitingInitState = false;
+  const queuedMessages = [];
 
   const elements = {
     toggleButton: document.getElementById("toggleInspect"),
@@ -32,6 +40,7 @@
 
   const state = {
     enabled: false,
+    desiredEnabled: false,
     lastPayload: null,
     editorMenuOpen: false,
     inferredProjectRoot: "",
@@ -74,6 +83,7 @@
       saveError: (error) => "Failed to save settings: " + error,
       openError: "This page doesn't expose an absolute file path, so editor open can't be linked automatically.",
       openSuccess: (filePath) => "Tried opening the editor. The path was copied too: " + filePath,
+      reconnecting: "DevTools connection lost. Reconnecting automatically...",
       themeAria: (theme) => theme === "dark" ? "Switch to light mode" : "Switch to dark mode",
       languageAria: "Toggle language",
       editorMenuAria: "Choose editor"
@@ -108,6 +118,7 @@
       saveError: (error) => "설정 저장에 실패했습니다: " + error,
       openError: "이 페이지는 절대 파일 경로를 노출하지 않아 editor open을 자동 연결할 수 없습니다.",
       openSuccess: (filePath) => "에디터 실행을 시도했고, 경로도 복사했습니다: " + filePath,
+      reconnecting: "DevTools 연결이 끊어졌습니다. 자동으로 다시 연결하는 중입니다...",
       themeAria: (theme) => theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환",
       languageAria: "언어 전환",
       editorMenuAria: "에디터 선택"
@@ -121,13 +132,47 @@
     { kind: "antigravity", label: "Antigravity", iconClass: "editor-option-icon--antigravity" }
   ];
 
-  port.onMessage.addListener((message) => {
+  connectPort();
+
+  function onPortMessage(message) {
     if (!message) {
       return;
     }
 
     if (message.type === "VSI_PANEL_STATE") {
-      state.enabled = Boolean(message.enabled);
+      const nextEnabled = Boolean(message.enabled);
+      const shouldRestoreEnabled =
+        awaitingInitState &&
+        reconnectRestoreEnabled &&
+        state.desiredEnabled &&
+        !nextEnabled;
+
+      if (awaitingInitState) {
+        awaitingInitState = false;
+        reconnectAttempts = 0;
+
+        if (shouldRestoreEnabled) {
+          safePostMessage({
+            type: "VSI_DEVTOOLS_SET_ENABLED",
+            tabId,
+            enabled: true
+          });
+        } else {
+          reconnectRestoreEnabled = false;
+          renderRootStatus();
+        }
+      }
+
+      state.enabled = nextEnabled;
+      if (shouldRestoreEnabled) {
+        state.desiredEnabled = true;
+      } else {
+        state.desiredEnabled = nextEnabled;
+      }
+
+      if (nextEnabled) {
+        reconnectRestoreEnabled = false;
+      }
       renderStatus();
       return;
     }
@@ -145,18 +190,15 @@
     if (message.type === "VSI_PANEL_ERROR") {
       renderError(message.message || "Unknown error");
     }
-  });
-
-  port.onDisconnect.addListener(() => {
-    portConnected = false;
-    renderSettingsMessage("DevTools connection lost. Reopen this panel.", "error");
-  });
+  }
 
   elements.toggleButton.addEventListener("click", () => {
+    const nextEnabled = !state.enabled;
+    state.desiredEnabled = nextEnabled;
     safePostMessage({
       type: "VSI_DEVTOOLS_SET_ENABLED",
       tabId,
-      enabled: !state.enabled
+      enabled: nextEnabled
     });
   });
 
@@ -183,11 +225,6 @@
   elements.editorMenuButton.addEventListener("click", onEditorMenuToggle);
   document.addEventListener("click", onDocumentClick, true);
   document.addEventListener("keydown", onDocumentKeyDown, true);
-
-  safePostMessage({
-    type: "VSI_DEVTOOLS_INIT",
-    tabId
-  });
 
   restoreSettings().catch((error) => {
     renderSettingsMessage(t("restoreError", stringifyError(error)), "error");
@@ -278,6 +315,7 @@
     state.inferredProjectRoot = stored.vsiInferredProjectRoot || "";
     state.settings.theme = stored.vsiTheme || "light";
     state.settings.language = stored.vsiLanguage || "en";
+    state.desiredEnabled = state.enabled;
 
     renderStaticText();
     applyTheme();
@@ -477,9 +515,11 @@
   }
 
   function safePostMessage(message) {
-    if (!portConnected) {
-      renderSettingsMessage("DevTools connection lost. Reopen this panel.", "error");
-      return false;
+    if (!portConnected || !port) {
+      queueMessage(message);
+      scheduleReconnect();
+      renderSettingsMessage(t("reconnecting"), "info");
+      return true;
     }
 
     try {
@@ -487,8 +527,112 @@
       return true;
     } catch (error) {
       portConnected = false;
-      renderSettingsMessage("DevTools connection lost. Reopen this panel.", "error");
-      return false;
+      queueMessage(message);
+      scheduleReconnect();
+      renderSettingsMessage(t("reconnecting"), "info");
+      return true;
+    }
+  }
+
+  function connectPort() {
+    clearReconnectTimer();
+
+    try {
+      port = chrome.runtime.connect({ name: PORT_NAME });
+    } catch (_error) {
+      port = null;
+      portConnected = false;
+      scheduleReconnect();
+      return;
+    }
+
+    portConnected = true;
+    awaitingInitState = true;
+    port.onMessage.addListener(onPortMessage);
+    port.onDisconnect.addListener(onPortDisconnect);
+    postInitMessage();
+    flushQueuedMessages();
+  }
+
+  function postInitMessage() {
+    if (!port) {
+      return;
+    }
+
+    try {
+      port.postMessage({
+        type: "VSI_DEVTOOLS_INIT",
+        tabId
+      });
+    } catch (_error) {
+      onPortDisconnect();
+    }
+  }
+
+  function onPortDisconnect() {
+    if (!portConnected) {
+      return;
+    }
+
+    portConnected = false;
+    port = null;
+    reconnectRestoreEnabled = reconnectRestoreEnabled || state.desiredEnabled;
+    renderSettingsMessage(t("reconnecting"), "info");
+    scheduleReconnect();
+  }
+
+  function scheduleReconnect() {
+    if (reconnectTimer) {
+      return;
+    }
+
+    const delay = Math.min(
+      RECONNECT_BASE_DELAY_MS * Math.max(1, 2 ** reconnectAttempts),
+      RECONNECT_MAX_DELAY_MS
+    );
+    reconnectAttempts += 1;
+
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = 0;
+      connectPort();
+    }, delay);
+  }
+
+  function clearReconnectTimer() {
+    if (!reconnectTimer) {
+      return;
+    }
+
+    clearTimeout(reconnectTimer);
+    reconnectTimer = 0;
+  }
+
+  function queueMessage(message) {
+    if (!message) {
+      return;
+    }
+
+    if (message.type === "VSI_DEVTOOLS_INIT") {
+      return;
+    }
+
+    queuedMessages.push(message);
+  }
+
+  function flushQueuedMessages() {
+    if (!port || !queuedMessages.length) {
+      return;
+    }
+
+    while (queuedMessages.length) {
+      const queuedMessage = queuedMessages.shift();
+      try {
+        port.postMessage(queuedMessage);
+      } catch (_error) {
+        queuedMessages.unshift(queuedMessage);
+        onPortDisconnect();
+        return;
+      }
     }
   }
 

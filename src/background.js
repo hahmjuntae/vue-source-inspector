@@ -1,6 +1,8 @@
 (function bootstrapBackground() {
   const BADGE_COLOR = "#2563eb";
+  const DEVTOOLS_RECONNECT_GRACE_MS = 1500;
   const devtoolsPorts = new Map();
+  const pendingDisconnectTimers = new Map();
   const tabState = new Map();
 
   chrome.runtime.onInstalled.addListener(() => {
@@ -85,13 +87,7 @@
       }
 
       unregisterDevtoolsPort(connectedTabId, port);
-
-      const currentState = getTabState(connectedTabId);
-      if (currentState.enabled && currentState.controller === "devtools") {
-        setInspectEnabled(connectedTabId, false, "background").catch((error) => {
-          console.error("[VSI] Failed to disable inspector after panel disconnect", error);
-        });
-      }
+      scheduleDisconnectCleanup(connectedTabId);
     });
   });
 
@@ -184,6 +180,7 @@
   }
 
   function registerDevtoolsPort(tabId, port) {
+    clearPendingDisconnect(tabId);
     if (!devtoolsPorts.has(tabId)) {
       devtoolsPorts.set(tabId, new Set());
     }
@@ -200,6 +197,38 @@
     if (!ports.size) {
       devtoolsPorts.delete(tabId);
     }
+  }
+
+  function scheduleDisconnectCleanup(tabId) {
+    clearPendingDisconnect(tabId);
+
+    const timer = setTimeout(() => {
+      pendingDisconnectTimers.delete(tabId);
+
+      const ports = devtoolsPorts.get(tabId);
+      if (ports && ports.size) {
+        return;
+      }
+
+      const currentState = getTabState(tabId);
+      if (currentState.enabled && currentState.controller === "devtools") {
+        setInspectEnabled(tabId, false, "background").catch((error) => {
+          console.error("[VSI] Failed to disable inspector after panel disconnect", error);
+        });
+      }
+    }, DEVTOOLS_RECONNECT_GRACE_MS);
+
+    pendingDisconnectTimers.set(tabId, timer);
+  }
+
+  function clearPendingDisconnect(tabId) {
+    const timer = pendingDisconnectTimers.get(tabId);
+    if (!timer) {
+      return;
+    }
+
+    clearTimeout(timer);
+    pendingDisconnectTimers.delete(tabId);
   }
 
   function postToTab(tabId, message) {
