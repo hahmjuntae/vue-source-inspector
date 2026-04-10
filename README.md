@@ -37,17 +37,17 @@ If you want to keep the unpacked extension up to date with `git pull`, load the 
 2. Open `chrome://extensions` in Chrome.
 3. Enable `Developer mode`.
 4. Click `Load unpacked`.
-5. Select the repository root, the folder that contains `manifest.json`:
-   `/Users/hahmjuntae/Desktop/project/chrome-extensions/vue-source-inspector`
+5. Select the repository root, the folder that contains `manifest.json`.
 
-Do not select the parent `chrome-extensions` folder. Chrome expects the selected folder to contain `manifest.json` at its root.
+For example, if you cloned into `~/workspace/vue-source-inspector`, select that folder directly.
+Do not select a parent folder that does not contain `manifest.json` at its root.
 
 ## Updating a local clone
 
 If you installed the extension from the repository root, you can update it with:
 
 ```bash
-cd /Users/hahmjuntae/Desktop/project/chrome-extensions/vue-source-inspector
+cd /path/to/vue-source-inspector
 git pull
 ```
 
