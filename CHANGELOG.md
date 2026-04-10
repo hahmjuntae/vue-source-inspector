@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3
 
 - Improved the on-page source popup with lock, close, theme-aware styling, and stronger editor-open fallback handling.
 - Refined the `Source` and `Element` cards to show clearer layered component context in the DevTools panel.
