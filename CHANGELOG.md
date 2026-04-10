@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- Fixed Source tile editor launches to prefer the runtime absolute file path before falling back to inferred root reconstruction.
+- Improved the panel debug output so the displayed open target matches the path actually used for editor deep links.
+
 ## 0.1.3
 
 - Improved the on-page source popup with lock, close, theme-aware styling, and stronger editor-open fallback handling.
