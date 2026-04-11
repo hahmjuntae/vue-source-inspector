@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+- Added localized labels for the on-page source popup so it follows the panel language setting.
+- Prepared Chrome Web Store submission materials including privacy policy, listing copy, screenshots, promo art, and a local Vue demo app for capturing store assets.
+- Exposed page-injected tooltip fonts through manifest resources so the packaged extension matches the documented UI.
+
 ## 0.1.4
 
 - Fixed Source tile editor launches to prefer the runtime absolute file path before falling back to inferred root reconstruction.
