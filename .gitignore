@@ -3,6 +3,7 @@
 release/
 DESIGN.md
 STORE_SUBMISSION.md
+demo-vue-app/node_modules/
 
 # Local editor and OS noise
 .idea/

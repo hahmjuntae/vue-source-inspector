@@ -11,6 +11,18 @@
     "http://*/*",
     "https://*/*"
   ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/devtools/assets/fonts/geist-mono/GeistMono-Variable.woff2",
+        "src/devtools/assets/fonts/geist-sans/Geist-Variable.woff2"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ],
   "icons": {
     "16": "src/assets/icons/icon-16.png",
     "32": "src/assets/icons/icon-32.png",
