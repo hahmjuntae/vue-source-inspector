@@ -611,6 +611,28 @@ test("extractStyleImportsFromSource resolves compiled vue style imports", () => 
   );
 });
 
+test("extractStyleImportsFromSource keeps css imports and expands extensionless aliases", () => {
+  const imports = resolver.extractStyleImportsFromSource(
+    [
+      "<style scoped>",
+      "@import '@/styles/base/reset.css';",
+      "@use '@/styles/themes/tokens';",
+      "</style>"
+    ].join("\n"),
+    "/src/components/desktop/elements/fb-button.vue"
+  );
+
+  assert.deepEqual(
+    imports.map((entry) => entry.path),
+    [
+      "/src/styles/base/reset.css",
+      "/src/styles/themes/tokens.scss",
+      "/src/styles/themes/tokens.sass",
+      "/src/styles/themes/tokens.css"
+    ]
+  );
+});
+
 test("decodeRawModuleText unwraps vite raw module exports", () => {
   const text = resolver.decodeRawModuleText(
     'export default "<style lang=\\"scss\\">@import \\"@/styles/base/reset.scss\\";</style>";'

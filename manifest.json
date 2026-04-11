@@ -39,5 +39,14 @@
       "16": "src/assets/icons/icon-16.png",
       "32": "src/assets/icons/icon-32.png"
     }
+  },
+  "commands": {
+    "toggle-inspector": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+X",
+        "mac": "Command+Shift+X"
+      },
+      "description": "Toggle Vue Source Inspector on the current tab"
+    }
   }
 }

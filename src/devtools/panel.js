@@ -31,16 +31,13 @@
     labelSource: document.getElementById("labelSource"),
     labelElement: document.getElementById("labelElement"),
     labelStyles: document.getElementById("labelStyles"),
-    labelDebug: document.getElementById("labelDebug"),
     metaNote: document.getElementById("metaNote"),
     elementTag: document.getElementById("elementTag"),
     elementValue: document.getElementById("elementValue"),
     elementDetails: document.getElementById("elementDetails"),
     sourceHighlights: document.getElementById("sourceHighlights"),
     styleCandidates: document.getElementById("styleCandidates"),
-    openHint: document.getElementById("openHint"),
-    copyDebug: document.getElementById("copyDebug"),
-    debugInfo: document.getElementById("debugInfo")
+    openHint: document.getElementById("openHint")
   };
 
   const state = {
@@ -76,8 +73,6 @@
       page: "Page",
       element: "Element",
       styles: "Styles",
-      debug: "Debug",
-      copy: "Copy",
       copied: "Copied.",
       openInEditor: "Open in editor",
       setDefaultIde: "Set default IDE",
@@ -91,7 +86,7 @@
       idLabel: 'id="',
       openHintReady: "Click a path to open it in the selected editor.",
       openHintUnavailable: "A path is required to open the file.",
-      noStyles: "No SCSS candidates could be inferred from this source file.",
+      noStyles: "No CSS, SCSS, or Sass candidates could be inferred from this source file.",
       resolvedReason: "Resolved from Vue runtime metadata.",
       autoRootDetected: (rootPath) => "Auto root detected: " + rootPath,
       autoRootPending: "Project root will be inferred automatically when an absolute file path is available.",
@@ -121,8 +116,6 @@
       page: "페이지 엔트리",
       element: "요소",
       styles: "스타일",
-      debug: "디버그",
-      copy: "복사",
       copied: "복사됨",
       openInEditor: "에디터에서 열기",
       setDefaultIde: "기본 IDE 설정",
@@ -136,7 +129,7 @@
       idLabel: 'id="',
       openHintReady: "경로를 클릭하면 선택한 에디터로 열기를 시도합니다.",
       openHintUnavailable: "파일 경로가 있어야 열 수 있습니다.",
-      noStyles: "이 소스 파일 기준으로 추론할 수 있는 SCSS 후보가 없습니다.",
+      noStyles: "이 소스 파일 기준으로 추론할 수 있는 CSS, SCSS, Sass 후보가 없습니다.",
       resolvedReason: "Vue 런타임 메타데이터에서 확인했습니다.",
       autoRootDetected: (rootPath) => "자동 감지된 루트: " + rootPath,
       autoRootPending: "절대 파일 경로가 잡히면 프로젝트 루트를 자동으로 추론합니다.",
@@ -251,8 +244,6 @@
     });
     clearSelectionView();
   });
-  elements.copyDebug.addEventListener("click", onCopyDebug);
-
   elements.themeToggle.addEventListener("click", onThemeToggle);
   elements.languageToggle.addEventListener("click", onLanguageToggle);
   elements.editorMenuButton.addEventListener("click", onEditorMenuToggle);
@@ -310,7 +301,6 @@
     renderRootStatus();
     renderStatus();
     renderStyleCandidates(loadedStyles);
-    renderDebugInfo(payload);
   }
 
   function renderError(message) {
@@ -328,7 +318,6 @@
     renderSourceHighlights([]);
     elements.openHint.textContent = t("openHintReady");
     renderStyleCandidates([]);
-    renderDebugInfo(null);
     renderStatus();
   }
 
@@ -457,8 +446,6 @@
     elements.labelSource.textContent = t("source");
     elements.labelElement.textContent = t("element");
     elements.labelStyles.textContent = t("styles");
-    elements.labelDebug.textContent = t("debug");
-    elements.copyDebug.textContent = t("copy");
     renderEditorMenuButton();
     elements.themeToggle.setAttribute("aria-label", t("themeAria", state.settings.theme));
     elements.languageToggle.setAttribute("aria-label", t("languageAria"));
@@ -469,7 +456,6 @@
       renderSourceHighlights([]);
       elements.openHint.textContent = t("openHintReady");
       renderStyleCandidates([]);
-      renderDebugInfo(null);
     }
   }
 
@@ -838,68 +824,6 @@
     for (const layer of layers) {
       const button = createComponentButton(layer.component, layer.kinds, "source-tile");
       elements.sourceHighlights.appendChild(button);
-    }
-  }
-
-  function renderDebugInfo(payload) {
-    elements.debugInfo.replaceChildren();
-
-    const lines = buildDebugLines(payload);
-    for (const line of lines) {
-      const item = document.createElement("div");
-      item.className = "debug-item";
-
-      const label = document.createElement("p");
-      label.className = "debug-label";
-      label.textContent = line.label;
-
-      const value = document.createElement("p");
-      value.className = "debug-value code";
-      value.textContent = line.value || "-";
-
-      item.append(label, value);
-      elements.debugInfo.appendChild(item);
-    }
-  }
-
-  function buildDebugLines(payload) {
-    const primary =
-      payload && payload.nearestComponent
-        ? payload.nearestComponent
-        : payload && payload.primaryComponent
-          ? payload.primaryComponent
-          : null;
-
-    const openPath = getComponentOpenPath(primary);
-    const editorTarget = openPath
-      ? editorLink.buildEditorTarget({
-          projectRoot: state.inferredProjectRoot,
-          filePath: openPath,
-          editorKind: state.settings.editorKind
-        })
-      : null;
-
-    return [
-      { label: "projectRoot", value: state.inferredProjectRoot || "" },
-      { label: "displayPath", value: primary && primary.file ? primary.file : "" },
-      { label: "absolutePath", value: editorTarget && editorTarget.absolutePath ? editorTarget.absolutePath : "" },
-      { label: "editorKind", value: state.settings.editorKind || "" },
-      { label: "editorUrl", value: editorTarget && editorTarget.url ? editorTarget.url : "" }
-    ];
-  }
-
-  async function onCopyDebug(event) {
-    event.preventDefault();
-
-    const text = buildDebugLines(state.lastPayload)
-      .map((line) => line.label + ": " + (line.value || "-"))
-      .join("\n");
-
-    try {
-      await navigator.clipboard.writeText(text);
-      renderSettingsMessage(t("copied"), "info");
-    } catch (error) {
-      renderSettingsMessage(stringifyError(error), "error");
     }
   }
 

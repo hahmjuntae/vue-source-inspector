@@ -15,6 +15,7 @@
   const OPEN_EDITOR_EVENT = "__VSI_OPEN_EDITOR__";
   const ROOT_ID = "vsi-root";
   const STYLE_ID = "vsi-style";
+  const LOCK_UI_HIDE_DELAY_MS = 5000;
 
   const state = {
     enabled: false,
@@ -27,6 +28,9 @@
     requestId: 0,
     latestRequestId: 0,
     pendingLock: false,
+    lockRequestId: 0,
+    lockUiHideTimer: 0,
+    lockUiHidden: false,
     pointerX: 0,
     pointerY: 0,
     uiRoot: null,
@@ -113,13 +117,16 @@
 
   function onResolverResponse(event) {
     const detail = event && event.detail ? event.detail : {};
-    if (detail.requestId !== state.latestRequestId || !state.enabled) {
+    const isLatestResponse = detail.requestId === state.latestRequestId;
+    const isLockResponse = state.pendingLock && detail.requestId === state.lockRequestId;
+    if ((!isLatestResponse && !isLockResponse) || !state.enabled) {
       return;
     }
 
-    const shouldLock = state.pendingLock;
+    const shouldLock = isLockResponse;
     if (shouldLock) {
       state.pendingLock = false;
+      state.lockRequestId = 0;
       state.locked = true;
     }
 
@@ -143,6 +150,9 @@
     state.enabled = true;
     state.locked = false;
     state.pendingLock = false;
+    state.lockRequestId = 0;
+    state.lockUiHidden = false;
+    clearLockedUiHideTimer();
     ensureUi();
 
     window.addEventListener("mousemove", onMouseMove, true);
@@ -164,6 +174,8 @@
     state.enabled = false;
     state.locked = Boolean(settings.locked);
     state.pendingLock = false;
+    state.lockRequestId = 0;
+    state.lockUiHidden = false;
     window.removeEventListener("mousemove", onMouseMove, true);
     window.removeEventListener("scroll", onViewportChange, true);
     window.removeEventListener("resize", onViewportChange, true);
@@ -193,6 +205,12 @@
       state.tooltipClose.hidden = !state.locked;
     }
 
+    if (state.locked && settings.preserveUi) {
+      scheduleLockedUiHide();
+    } else {
+      clearLockedUiHideTimer();
+    }
+
     notifyStateChange();
   }
 
@@ -203,6 +221,9 @@
 
     state.locked = false;
     state.pendingLock = false;
+    state.lockRequestId = 0;
+    state.lockUiHidden = false;
+    clearLockedUiHideTimer();
     state.hoveredElement = null;
     state.lastPayload = null;
 
@@ -231,7 +252,7 @@
   }
 
   function onMouseMove(event) {
-    if (state.locked) {
+    if (state.locked || state.pendingLock) {
       return;
     }
     state.pointerX = event.clientX;
@@ -246,9 +267,16 @@
     }
 
     if (state.locked) {
+      if (state.lockUiHidden) {
+        return;
+      }
       if (state.hoveredElement) {
         updateOverlay(state.hoveredElement);
       }
+      return;
+    }
+
+    if (state.pendingLock) {
       return;
     }
 
@@ -315,8 +343,22 @@
 
     state.pointerX = event.clientX;
     state.pointerY = event.clientY;
-    state.pendingLock = true;
-    inspectAtPointer();
+
+    if (state.rafId) {
+      cancelAnimationFrame(state.rafId);
+      state.rafId = 0;
+    }
+
+    const target = document.elementFromPoint(state.pointerX, state.pointerY);
+    if (target) {
+      state.hoveredElement = target;
+      updateOverlay(target);
+    }
+
+    state.pendingLock = false;
+    state.lockRequestId = 0;
+    state.locked = true;
+    disableInspector({ preservePayload: true, preserveUi: true, locked: true });
 
     event.preventDefault();
     event.stopPropagation();
@@ -326,7 +368,7 @@
   }
 
   function scheduleInspection() {
-    if (!state.enabled || state.locked || state.rafId) {
+    if (!state.enabled || state.locked || state.pendingLock || state.rafId) {
       return;
     }
 
@@ -353,6 +395,8 @@
         }
       })
     );
+
+    return state.requestId;
   }
 
   function ensureUi() {
@@ -699,6 +743,40 @@
 
     state.tooltip.style.left = left + "px";
     state.tooltip.style.top = top + "px";
+  }
+
+  function scheduleLockedUiHide() {
+    clearLockedUiHideTimer();
+    state.lockUiHidden = false;
+    state.lockUiHideTimer = window.setTimeout(() => {
+      state.lockUiHideTimer = 0;
+      hideLockedUi();
+    }, LOCK_UI_HIDE_DELAY_MS);
+  }
+
+  function clearLockedUiHideTimer() {
+    if (!state.lockUiHideTimer) {
+      return;
+    }
+
+    window.clearTimeout(state.lockUiHideTimer);
+    state.lockUiHideTimer = 0;
+  }
+
+  function hideLockedUi() {
+    if (!state.locked) {
+      return;
+    }
+
+    state.lockUiHidden = true;
+
+    if (state.overlay) {
+      state.overlay.style.display = "none";
+    }
+
+    if (state.tooltip) {
+      state.tooltip.style.display = "none";
+    }
   }
 
   function teardown() {

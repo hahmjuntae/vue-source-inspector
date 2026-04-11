@@ -833,16 +833,18 @@
     const entries = [];
     const seen = new Set();
     const pushResolved = (rawSpecifier) => {
-      const resolvedPath = resolveStyleImportPath(rawSpecifier, sourcePath);
-      if (!resolvedPath || seen.has(resolvedPath)) {
-        return;
-      }
+      const resolvedPaths = resolveStyleImportPaths(rawSpecifier, sourcePath);
+      for (const resolvedPath of resolvedPaths) {
+        if (!resolvedPath || seen.has(resolvedPath)) {
+          continue;
+        }
 
-      seen.add(resolvedPath);
-      entries.push({
-        path: resolvedPath,
-        absolutePath: null
-      });
+        seen.add(resolvedPath);
+        entries.push({
+          path: resolvedPath,
+          absolutePath: null
+        });
+      }
     };
 
     const styleImportPattern =
@@ -960,19 +962,21 @@
     }
   }
 
-  function resolveStyleImportPath(specifier, sourcePath) {
+  function resolveStyleImportPaths(specifier, sourcePath) {
     if (!specifier || typeof specifier !== "string") {
-      return null;
+      return [];
     }
 
     let normalized = specifier.trim().replaceAll("\\", "/");
     if (!normalized) {
-      return null;
+      return [];
     }
 
     const queryless = normalized.replace(/[?#].*$/, "");
+    let hasExplicitExtension = false;
     if (queryless.endsWith(".css") || queryless.endsWith(".scss") || queryless.endsWith(".sass")) {
       normalized = queryless;
+      hasExplicitExtension = true;
     } else if (
       queryless.endsWith(".vue") &&
       /(?:\?|&)type=style/i.test(normalized) &&
@@ -981,6 +985,7 @@
       const langMatch = normalized.match(/lang\.(scss|sass|css)/i);
       if (langMatch) {
         normalized = queryless.replace(/\.vue$/i, "." + langMatch[1].toLowerCase());
+        hasExplicitExtension = true;
       }
     }
 
@@ -993,15 +998,15 @@
       normalized = resolveRelativePath(baseDirectory, normalized);
     }
 
-    if (!/\.(scss|sass|css)$/i.test(normalized)) {
-      normalized += ".scss";
-    }
-
     if (!normalized.startsWith("/src/")) {
-      return null;
+      return [];
     }
 
-    return normalized;
+    if (hasExplicitExtension || /\.(scss|sass|css)$/i.test(normalized)) {
+      return [normalized];
+    }
+
+    return [normalized + ".scss", normalized + ".sass", normalized + ".css"];
   }
 
   function resolveRelativePath(baseDirectory, relativePath) {
