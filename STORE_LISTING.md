@@ -24,7 +24,15 @@ Use the `VSI` DevTools tab to inspect a page, hover any Vue-rendered element, an
 - `Parent`: the next useful parent component
 - `Page`: the current page entry file
 
-The extension can also surface related style files and open source files in supported desktop editors such as VS Code, Cursor, IntelliJ IDEA, and WebStorm.
+The extension also surfaces related style files and lets you open source or style files in supported desktop editors such as VS Code, Cursor, IntelliJ IDEA, WebStorm, and Antigravity.
+
+Key capabilities:
+
+- inspect directly from the `VSI` DevTools panel
+- start page inspection with a keyboard shortcut
+- lock the current result with a click
+- review both component files and related styles
+- move from rendered DOM to local source files without manually searching the project
 
 This extension is designed for Vue projects running in a local development environment. It works best when the target page exposes Vue runtime source metadata.
 
@@ -38,23 +46,19 @@ English
 
 ## Suggested screenshots
 
-Use the prepared assets in `store-assets/screenshots/`:
+Use one approved DevTools capture that clearly shows:
 
-- `store-assets/screenshots/vsi-screenshot-01.png`
-- `store-assets/screenshots/vsi-screenshot-02.png`
-- `store-assets/screenshots/vsi-screenshot-03.png`
+- the `Source` section with `Nearest`, `Parent`, and `Page`
+- the `Styles` section with real stylesheet results
+- the on-page popup visible on the inspected page
 
-## Small promo image
-
-Use:
-
-- `store-assets/promo/small-promo-440x280.png`
+Keep the final screenshot outside the repository if you do not want large binary assets tracked in git.
 
 ## Icon
 
 Use:
 
-- `src/assets/icons/icon-128.png`
+- `store-assets/icons/store-icon-128.png`
 
 ## Privacy policy URL
 
@@ -67,7 +71,7 @@ Example:
 
 Suggested:
 
-- repository README or GitHub issues page
+- GitHub repository README or issues page
 
 ## Permission explanations
 

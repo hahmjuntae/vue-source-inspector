@@ -1,12 +1,13 @@
 # Privacy Policy
 
-Last updated: April 10, 2026
+Last updated: April 11, 2026
 
 Vue Source Inspector does not collect, transmit, sell, or share personal data with any remote server.
 
 ## What the extension does
 
 - Inspects Vue-rendered elements on pages you open in Chrome DevTools.
+- Lets you toggle inspection directly on the current page with the extension action or keyboard shortcut.
 - Reads component metadata that is already exposed by the target page's Vue runtime.
 - Tries to open local source files in a desktop editor through editor URL handlers such as `vscode://`.
 - Stores local extension preferences such as selected editor, inferred project root, theme, and language using Chrome local storage.
