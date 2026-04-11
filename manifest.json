@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Vue Source Inspector",
-  "description": "Hover any Vue-rendered element and surface the owning component source file.",
-  "version": "0.1.5",
+  "description": "Inspect Vue component source and related styles directly from Chrome DevTools.",
+  "version": "1.0.0",
   "permissions": [
     "scripting",
     "storage"

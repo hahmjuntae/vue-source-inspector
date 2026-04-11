@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0
+
+- Finalized the core inspection workflow with layered `Nearest`, `Parent`, and `Page` source results in the DevTools panel.
+- Added direct style surfacing for matched stylesheets plus Vue SFC style imports across CSS, SCSS, and Sass files.
+- Added stable editor integration for VS Code, Cursor, IntelliJ IDEA, WebStorm, and Antigravity, including global inspect toggling with `Ctrl+Shift+X` / `Cmd+Shift+X`.
+- Refined the on-page popup flow with click-to-lock behavior, auto-hide after lock, and panel selection handoff for longer inspection work.
+- Prepared the repository for Chrome Web Store publication with a final store icon, privacy policy, listing copy, and release-ready documentation.
+- Removed temporary local demo-app assets and broken placeholder store binaries from the tracked release surface.
+
 ## 0.1.5
 
 - Added localized labels for the on-page source popup so it follows the panel language setting.
