@@ -567,7 +567,29 @@ test("resolveStyleEntries keeps loaded project styles at /src paths", () => {
 
   assert.deepEqual(
     entries.map((entry) => entry.path),
-    ["/src/styles/reset.scss"]
+    ["/src/components/button/index.scss", "/src/styles/reset.scss"]
+  );
+});
+
+test("resolveStyleEntries maps vite vue css modules to css files", () => {
+  const entries = resolver.resolveStyleEntries([
+    "/Users/hahmjuntae/workspace/my-app/src/components/PrimaryButton.vue?vue&type=style&index=0&scoped=abc&lang.css",
+    "/Users/hahmjuntae/workspace/my-app/src/components/SearchLayout.vue?vue&type=style&index=0&scoped=abc"
+  ]);
+
+  assert.deepEqual(
+    entries.map((entry) => entry.path),
+    [
+      "/src/components/PrimaryButton.css",
+      "/src/components/SearchLayout.css"
+    ]
+  );
+  assert.deepEqual(
+    entries.map((entry) => entry.absolutePath),
+    [
+      "/Users/hahmjuntae/workspace/my-app/src/components/PrimaryButton.css",
+      "/Users/hahmjuntae/workspace/my-app/src/components/SearchLayout.css"
+    ]
   );
 });
 

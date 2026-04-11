@@ -5,12 +5,16 @@
 
   const previousController = window.__VUE_SOURCE_INSPECTOR_PAGE_BRIDGE_CONTROLLER__;
   if (previousController && typeof previousController.teardown === "function") {
-    previousController.teardown();
+    try {
+      previousController.teardown();
+    } catch (_error) {
+      delete window.__VUE_SOURCE_INSPECTOR_PAGE_BRIDGE_CONTROLLER__;
+    }
   }
 
-  const REQUEST_EVENT = "__VSI_REQUEST__";
-  const RESPONSE_EVENT = "__VSI_RESPONSE__";
-  const OPEN_EDITOR_EVENT = "__VSI_OPEN_EDITOR__";
+  const REQUEST_EVENT = "__VSI_REQUEST_V2__";
+  const RESPONSE_EVENT = "__VSI_RESPONSE_V2__";
+  const OPEN_EDITOR_EVENT = "__VSI_OPEN_EDITOR_V2__";
   const resolver = window.VueSourceInspectorResolver;
 
   if (!resolver) {
@@ -84,6 +88,12 @@
       }, 1200);
     } catch (_error) {
       // Ignore iframe fallback errors.
+    }
+
+    try {
+      window.location.assign(url);
+    } catch (_error) {
+      // Ignore location fallback errors.
     }
   }
 

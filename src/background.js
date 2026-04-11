@@ -23,20 +23,6 @@
     }
   });
 
-  chrome.commands.onCommand.addListener((command) => {
-    if (command !== "toggle-inspector") {
-      return;
-    }
-
-    toggleInspectorForActiveTab().catch(async (error) => {
-      console.error("[VSI] Failed to toggle inspector from command", error);
-      const tab = await getActiveTab().catch(() => null);
-      if (tab && typeof tab.id === "number") {
-        await chrome.action.setBadgeText({ tabId: tab.id, text: "ERR" });
-      }
-    });
-  });
-
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name !== "VSI_DEVTOOLS_PORT") {
       return;
@@ -159,8 +145,9 @@
         console.error("[VSI] Failed to trigger editor open from background", error);
       });
       postToTab(sender.tab.id, {
-        type: "VSI_PANEL_OPEN_EDITOR",
-        filePath: message.filePath || ""
+        type: "VSI_PANEL_CLICK_SOURCE",
+        filePath: message.filePath || "",
+        sourceKey: message.sourceKey || ""
       });
       return;
     }
@@ -208,34 +195,6 @@
       type: "VSI_PANEL_STATE",
       enabled: state.enabled
     });
-  }
-
-  async function toggleInspectorForActiveTab() {
-    const tab = await getActiveTab();
-    if (!tab || typeof tab.id !== "number") {
-      return;
-    }
-
-    if (!isInspectableTab(tab)) {
-      return;
-    }
-
-    const nextEnabled = !getTabState(tab.id).enabled;
-    await setInspectEnabled(tab.id, nextEnabled, "command");
-  }
-
-  async function getActiveTab() {
-    const tabs = await chrome.tabs.query({
-      active: true,
-      lastFocusedWindow: true
-    });
-
-    return Array.isArray(tabs) && tabs.length ? tabs[0] : null;
-  }
-
-  function isInspectableTab(tab) {
-    const url = typeof tab.url === "string" ? tab.url : "";
-    return /^https?:\/\//i.test(url);
   }
 
   function getTabState(tabId) {
@@ -403,6 +362,12 @@
           }, 1200);
         } catch (_error) {
           // Ignore iframe fallback errors.
+        }
+
+        try {
+          window.location.assign(targetUrl);
+        } catch (_error) {
+          // Ignore location fallback errors.
         }
       },
       args: [url]

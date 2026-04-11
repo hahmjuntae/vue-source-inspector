@@ -7,15 +7,29 @@
   const previousController =
     window.__VUE_SOURCE_INSPECTOR_CONTENT_SCRIPT_CONTROLLER__;
   if (previousController && typeof previousController.teardown === "function") {
-    previousController.teardown();
+    try {
+      previousController.teardown();
+    } catch (_error) {
+      delete window.__VUE_SOURCE_INSPECTOR_CONTENT_SCRIPT_CONTROLLER__;
+    }
   }
 
-  const REQUEST_EVENT = "__VSI_REQUEST__";
-  const RESPONSE_EVENT = "__VSI_RESPONSE__";
-  const OPEN_EDITOR_EVENT = "__VSI_OPEN_EDITOR__";
+  const REQUEST_EVENT = "__VSI_REQUEST_V2__";
+  const RESPONSE_EVENT = "__VSI_RESPONSE_V2__";
+  const OPEN_EDITOR_EVENT = "__VSI_OPEN_EDITOR_V2__";
   const ROOT_ID = "vsi-root";
   const STYLE_ID = "vsi-style";
   const LOCK_UI_HIDE_DELAY_MS = 5000;
+
+  const staleRoot = document.getElementById(ROOT_ID);
+  if (staleRoot) {
+    staleRoot.remove();
+  }
+
+  const staleStyle = document.getElementById(STYLE_ID);
+  if (staleStyle) {
+    staleStyle.remove();
+  }
 
   const state = {
     enabled: false,
@@ -61,8 +75,11 @@
     }
   };
 
+  if (!isExtensionContextAvailable()) {
+    return;
+  }
+
   chrome.runtime.onMessage.addListener(onRuntimeMessage);
-  chrome.storage.onChanged.addListener(onStorageChanged);
   window.addEventListener(RESPONSE_EVENT, onResolverResponse, true);
   window.addEventListener("keydown", onShortcutKeyDown, true);
 
@@ -88,57 +105,36 @@
     }
   }
 
-  function onStorageChanged(changes, areaName) {
-    if (areaName !== "local") {
-      return;
-    }
-
-    if (changes.vsiTheme) {
-      const nextTheme = normalizeTheme(changes.vsiTheme.newValue);
-      if (nextTheme !== state.theme) {
-        state.theme = nextTheme;
-        applyTheme();
-      }
-    }
-
-    if (changes.vsiEditorKind) {
-      state.editorKind = normalizeEditorKind(changes.vsiEditorKind.newValue);
-    }
-
-    if (changes.vsiInferredProjectRoot) {
-      state.inferredProjectRoot = normalizeProjectRoot(changes.vsiInferredProjectRoot.newValue);
-    }
-
-    if (changes.vsiLanguage) {
-      state.language = normalizeLanguage(changes.vsiLanguage.newValue);
-      applyLanguage();
-    }
-  }
-
   function onResolverResponse(event) {
-    const detail = event && event.detail ? event.detail : {};
-    const isLatestResponse = detail.requestId === state.latestRequestId;
-    const isLockResponse = state.pendingLock && detail.requestId === state.lockRequestId;
-    if ((!isLatestResponse && !isLockResponse) || !state.enabled) {
-      return;
-    }
+    try {
+      const detail = event && event.detail ? event.detail : {};
+      const isLatestResponse = detail.requestId === state.latestRequestId;
+      const isLockResponse = state.pendingLock && detail.requestId === state.lockRequestId;
+      if ((!isLatestResponse && !isLockResponse) || !state.enabled) {
+        return;
+      }
 
-    const shouldLock = isLockResponse;
-    if (shouldLock) {
-      state.pendingLock = false;
-      state.lockRequestId = 0;
-      state.locked = true;
-    }
+      const shouldLock = isLockResponse;
+      if (shouldLock) {
+        state.pendingLock = false;
+        state.lockRequestId = 0;
+        state.locked = true;
+      }
 
-    state.lastPayload = detail.payload || {};
-    chrome.runtime.sendMessage({
-      type: "VSI_INSPECTION_RESULT",
-      payload: state.lastPayload
-    });
-    updateTooltipContent(state.lastPayload);
+      state.lastPayload = detail.payload || {};
+      safeRuntimeSendMessage({
+        type: "VSI_INSPECTION_RESULT",
+        payload: state.lastPayload
+      });
+      updateTooltipContent(state.lastPayload);
 
-    if (shouldLock) {
-      disableInspector({ preservePayload: true, preserveUi: true, locked: true });
+      if (shouldLock) {
+        disableInspector({ preservePayload: true, preserveUi: true, locked: true });
+      }
+    } catch (error) {
+      if (!handleContextInvalidation(error)) {
+        throw error;
+      }
     }
   }
 
@@ -153,6 +149,7 @@
     state.lockRequestId = 0;
     state.lockUiHidden = false;
     clearLockedUiHideTimer();
+    restoreSettings().catch(() => {});
     ensureUi();
 
     window.addEventListener("mousemove", onMouseMove, true);
@@ -215,37 +212,43 @@
   }
 
   function dismissLockedSelection() {
-    if (!state.locked) {
-      return;
-    }
+    try {
+      if (!state.locked) {
+        return;
+      }
 
-    state.locked = false;
-    state.pendingLock = false;
-    state.lockRequestId = 0;
-    state.lockUiHidden = false;
-    clearLockedUiHideTimer();
-    state.hoveredElement = null;
-    state.lastPayload = null;
+      state.locked = false;
+      state.pendingLock = false;
+      state.lockRequestId = 0;
+      state.lockUiHidden = false;
+      clearLockedUiHideTimer();
+      state.hoveredElement = null;
+      state.lastPayload = null;
 
-    if (state.overlay) {
-      state.overlay.style.display = "none";
-    }
-    if (state.tooltip) {
-      state.tooltip.style.display = "none";
-      state.tooltip.dataset.locked = "false";
-    }
-    if (state.tooltipClose) {
-      state.tooltipClose.hidden = true;
-    }
+      if (state.overlay) {
+        state.overlay.style.display = "none";
+      }
+      if (state.tooltip) {
+        state.tooltip.style.display = "none";
+        state.tooltip.dataset.locked = "false";
+      }
+      if (state.tooltipClose) {
+        state.tooltipClose.hidden = true;
+      }
 
-    chrome.runtime.sendMessage({
-      type: "VSI_SELECTION_CLEARED"
-    });
-    notifyStateChange();
+      safeRuntimeSendMessage({
+        type: "VSI_SELECTION_CLEARED"
+      });
+      notifyStateChange();
+    } catch (error) {
+      if (!handleContextInvalidation(error)) {
+        throw error;
+      }
+    }
   }
 
   function notifyStateChange() {
-    chrome.runtime.sendMessage({
+    safeRuntimeSendMessage({
       type: "VSI_CONTENT_STATE_CHANGED",
       enabled: state.enabled
     });
@@ -359,6 +362,9 @@
     state.lockRequestId = 0;
     state.locked = true;
     disableInspector({ preservePayload: true, preserveUi: true, locked: true });
+    if (state.lastPayload) {
+      renderTooltipLayers(state.lastPayload);
+    }
 
     event.preventDefault();
     event.stopPropagation();
@@ -466,12 +472,15 @@
 
     const style = document.createElement("style");
     style.id = STYLE_ID;
-    const geistUrl = chrome.runtime.getURL("src/devtools/assets/fonts/geist-sans/Geist-Variable.woff2");
-    const geistMonoUrl = chrome.runtime.getURL("src/devtools/assets/fonts/geist-mono/GeistMono-Variable.woff2");
+    const geistUrl = safeRuntimeGetUrl("src/devtools/assets/fonts/geist-sans/Geist-Variable.woff2");
+    const geistMonoUrl = safeRuntimeGetUrl("src/devtools/assets/fonts/geist-mono/GeistMono-Variable.woff2");
+    if (!geistUrl || !geistMonoUrl) {
+      return;
+    }
     style.textContent = [
-      "@font-face { font-family: 'Geist'; src: url('" + geistUrl + "') format('woff2'); font-weight: 100 900; font-style: normal; }",
-      "@font-face { font-family: 'Geist Mono'; src: url('" + geistMonoUrl + "') format('woff2'); font-weight: 100 900; font-style: normal; }",
-      "#vsi-root { position: fixed; inset: 0; pointer-events: none; z-index: 2147483647; font-family: 'Geist', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif; font-feature-settings: 'liga' 1; --vsi-overlay-border: #2563eb; --vsi-overlay-fill: rgba(37, 99, 235, 0.12); --vsi-overlay-shadow: rgba(37, 99, 235, 0.35); --vsi-tooltip-bg: rgba(255, 255, 255, 0.96); --vsi-tooltip-text: #171717; --vsi-tooltip-muted: rgba(23, 23, 23, 0.6); --vsi-tooltip-card: rgba(0, 0, 0, 0.04); --vsi-tooltip-shadow: 0 8px 24px rgba(15, 23, 42, 0.14); }",
+      "@font-face { font-family: 'VSI Geist'; src: url('" + geistUrl + "') format('woff2'); font-weight: 100 900; font-style: normal; }",
+      "@font-face { font-family: 'VSI Geist Mono'; src: url('" + geistMonoUrl + "') format('woff2'); font-weight: 100 900; font-style: normal; }",
+      "#vsi-root { position: fixed; inset: 0; pointer-events: none; z-index: 2147483647; font-family: 'VSI Geist', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif; font-feature-settings: 'liga' 1; --vsi-overlay-border: #2563eb; --vsi-overlay-fill: rgba(37, 99, 235, 0.12); --vsi-overlay-shadow: rgba(37, 99, 235, 0.35); --vsi-tooltip-bg: rgba(255, 255, 255, 0.96); --vsi-tooltip-text: #171717; --vsi-tooltip-muted: rgba(23, 23, 23, 0.6); --vsi-tooltip-card: rgba(0, 0, 0, 0.04); --vsi-tooltip-shadow: 0 8px 24px rgba(15, 23, 42, 0.14); }",
       "#vsi-root[data-theme='dark'] { --vsi-overlay-border: #6aa9ff; --vsi-overlay-fill: rgba(106, 169, 255, 0.16); --vsi-overlay-shadow: rgba(106, 169, 255, 0.35); --vsi-tooltip-bg: rgba(17, 17, 17, 0.94); --vsi-tooltip-text: #ffffff; --vsi-tooltip-muted: rgba(255, 255, 255, 0.68); --vsi-tooltip-card: rgba(255, 255, 255, 0.06); --vsi-tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.22); }",
       ".vsi-overlay { position: fixed; border: 2px solid var(--vsi-overlay-border); background: var(--vsi-overlay-fill); box-shadow: 0 0 0 1px var(--vsi-overlay-shadow); display: none; }",
       ".vsi-tooltip { position: fixed; min-width: 260px; max-width: min(520px, calc(100vw - 24px)); padding: 10px 12px; border-radius: 12px; background: var(--vsi-tooltip-bg); color: var(--vsi-tooltip-text); box-shadow: var(--vsi-tooltip-shadow); display: none; pointer-events: none; }",
@@ -483,7 +492,8 @@
       ".vsi-tooltip__close svg { width: 14px; height: 14px; }",
       ".vsi-tooltip__body { display: grid; gap: 8px; }",
       ".vsi-tooltip__empty { font-size: 12px; line-height: 1.4; color: var(--vsi-tooltip-text); }",
-      ".vsi-tooltip__item { display: grid; gap: 4px; width: 100%; border: 0; padding: 8px 10px; border-radius: 10px; background: var(--vsi-tooltip-card); text-align: left; color: inherit; font: inherit; cursor: default; }",
+      ".vsi-tooltip__item { display: grid; gap: 4px; width: 100%; border: 0; padding: 8px 10px; border-radius: 10px; background: var(--vsi-tooltip-card); text-align: left; color: inherit; font: inherit; text-decoration: none; cursor: default; }",
+      ".vsi-tooltip__item:visited, .vsi-tooltip__item:hover, .vsi-tooltip__item:active { color: inherit; text-decoration: none; }",
       ".vsi-tooltip[data-locked='true'] .vsi-tooltip__item { cursor: pointer; }",
       ".vsi-tooltip[data-locked='true'] .vsi-tooltip__item:hover { background: rgba(0, 114, 245, 0.12); }",
       "#vsi-root[data-theme='dark'] .vsi-tooltip[data-locked='true'] .vsi-tooltip__item:hover { background: rgba(106, 169, 255, 0.12); }",
@@ -551,10 +561,17 @@
     }
 
     for (const layer of layers) {
-      const item = document.createElement("button");
-      item.type = "button";
+      const openPath = getTooltipOpenPath(layer.component);
+      const isOpenable = Boolean(state.locked && openPath);
+      const item = document.createElement(isOpenable ? "a" : "button");
       item.className = "vsi-tooltip__item";
-      item.disabled = !state.locked || !layer.target || !layer.target.ok;
+      if (isOpenable) {
+        item.href = layer.target && layer.target.ok ? layer.target.url : "#";
+        item.rel = "noopener noreferrer";
+      } else {
+        item.type = "button";
+        item.disabled = true;
+      }
 
       const meta = document.createElement("div");
       meta.className = "vsi-tooltip__meta";
@@ -574,22 +591,37 @@
       file.className = "vsi-tooltip__file";
       file.textContent = layer.component.file;
 
-      if (state.locked && layer.target && layer.target.ok) {
+      if (isOpenable) {
+        item.addEventListener("mousedown", (event) => {
+          if (event.button !== 0) {
+            return;
+          }
+
+          if (layer.target && layer.target.ok) {
+            openEditorTargetFromPopup(layer.target);
+            requestEditorOpenInPage(layer.target.url || "");
+          }
+        });
+
         item.addEventListener("click", (event) => {
-          event.preventDefault();
           event.stopPropagation();
-          chrome.runtime.sendMessage({
+          if (!layer.target || !layer.target.ok) {
+            event.preventDefault();
+          }
+
+          safeRuntimeSendMessage({
             type: "VSI_OPEN_EDITOR_REQUEST",
-            filePath: layer.target.absolutePath,
-            url: layer.target.url || ""
-          }).catch(() => {});
+            filePath: openPath,
+            sourceKey: getTooltipSourceKey(layer.component),
+            url: layer.target && layer.target.ok ? layer.target.url || "" : ""
+          });
 
-          chrome.runtime.sendMessage({
+          safeRuntimeSendMessage({
             type: "VSI_FOCUS_SOURCE_REQUEST",
-            sourceKey: layer.target.sourceKey
-          }).catch(() => {});
+            sourceKey: getTooltipSourceKey(layer.component)
+          });
 
-          navigator.clipboard.writeText(layer.target.absolutePath).catch(() => {});
+          navigator.clipboard.writeText(openPath).catch(() => {});
         });
       }
 
@@ -643,6 +675,22 @@
   function getFileName(filePath) {
     const normalized = String(filePath || "").replaceAll("\\", "/");
     return normalized.split("/").pop() || normalized || "Unknown";
+  }
+
+  function getTooltipOpenPath(component) {
+    if (!component) {
+      return "";
+    }
+
+    return component.absoluteFile || component.file || "";
+  }
+
+  function getTooltipSourceKey(component) {
+    if (!component) {
+      return "";
+    }
+
+    return component.absoluteFile || component.file || component.name || "";
   }
 
   function buildTooltipEditorTarget(component) {
@@ -781,15 +829,17 @@
 
   function teardown() {
     disableInspector();
-    chrome.runtime.onMessage.removeListener(onRuntimeMessage);
-    chrome.storage.onChanged.removeListener(onStorageChanged);
+    removeRuntimeListenerSafely();
     window.removeEventListener(RESPONSE_EVENT, onResolverResponse, true);
     window.removeEventListener("keydown", onShortcutKeyDown, true);
     delete window.__VUE_SOURCE_INSPECTOR_CONTENT_SCRIPT_CONTROLLER__;
   }
 
   async function restoreSettings() {
-    const stored = await chrome.storage.local.get(["vsiTheme", "vsiEditorKind", "vsiLanguage"]);
+    const stored = await safeStorageGet(["vsiTheme", "vsiEditorKind", "vsiLanguage", "vsiInferredProjectRoot"]);
+    if (!stored) {
+      return;
+    }
     state.theme = normalizeTheme(stored.vsiTheme);
     state.editorKind = normalizeEditorKind(stored.vsiEditorKind);
     state.language = normalizeLanguage(stored.vsiLanguage);
@@ -844,6 +894,138 @@
 
     const normalized = value.trim().replaceAll("\\", "/");
     return normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
+  }
+
+  function isExtensionContextAvailable() {
+    try {
+      return Boolean(chrome && chrome.runtime && chrome.runtime.id);
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function isContextInvalidatedError(error) {
+    return Boolean(
+      error &&
+        typeof error.message === "string" &&
+        error.message.includes("Extension context invalidated")
+    );
+  }
+
+  function handleContextInvalidation(error) {
+    if (!isContextInvalidatedError(error)) {
+      return false;
+    }
+
+    try {
+      removeRuntimeListenerSafely();
+      window.removeEventListener(RESPONSE_EVENT, onResolverResponse, true);
+      window.removeEventListener("keydown", onShortcutKeyDown, true);
+      delete window.__VUE_SOURCE_INSPECTOR_CONTENT_SCRIPT_CONTROLLER__;
+    } catch (_cleanupError) {
+      // Ignore cleanup failures during extension reload.
+    }
+
+    return true;
+  }
+
+  function safeRuntimeSendMessage(message) {
+    if (!isExtensionContextAvailable()) {
+      return Promise.resolve();
+    }
+
+    try {
+      return chrome.runtime.sendMessage(message).catch((error) => {
+        if (!handleContextInvalidation(error)) {
+          throw error;
+        }
+      });
+    } catch (error) {
+      if (!handleContextInvalidation(error)) {
+        throw error;
+      }
+      return Promise.resolve();
+    }
+  }
+
+  function safeRuntimeGetUrl(path) {
+    if (!isExtensionContextAvailable()) {
+      return "";
+    }
+
+    try {
+      return chrome.runtime.getURL(path);
+    } catch (error) {
+      handleContextInvalidation(error);
+      return "";
+    }
+  }
+
+  function requestEditorOpenInPage(url) {
+    if (!url) {
+      return;
+    }
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_EDITOR_EVENT, {
+          detail: {
+            url
+          }
+        })
+      );
+    } catch (_error) {
+      // Ignore page-world dispatch failures and keep background fallback.
+    }
+  }
+
+  function openEditorTargetFromPopup(target) {
+    if (!target || !target.url) {
+      return;
+    }
+
+    try {
+      const anchor = document.createElement("a");
+      anchor.href = target.url;
+      anchor.rel = "noopener noreferrer";
+      anchor.style.display = "none";
+      document.documentElement.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch (_error) {
+      // Ignore direct anchor failures and continue with location fallback.
+    }
+
+    try {
+      window.location.href = target.url;
+    } catch (_error) {
+      // Ignore location fallback failures.
+    }
+  }
+
+  async function safeStorageGet(keys) {
+    if (!isExtensionContextAvailable()) {
+      return null;
+    }
+
+    try {
+      return await chrome.storage.local.get(keys);
+    } catch (error) {
+      if (!handleContextInvalidation(error)) {
+        throw error;
+      }
+      return null;
+    }
+  }
+
+  function removeRuntimeListenerSafely() {
+    try {
+      if (chrome.runtime && chrome.runtime.onMessage) {
+        chrome.runtime.onMessage.removeListener(onRuntimeMessage);
+      }
+    } catch (_error) {
+      // Ignore invalidated runtime cleanup.
+    }
   }
 
   function tt(key) {

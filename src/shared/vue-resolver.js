@@ -1032,7 +1032,7 @@
       return null;
     }
 
-    const normalized = value.trim().replaceAll("\\", "/");
+    const normalized = normalizeStyleModulePath(value.trim().replaceAll("\\", "/"));
     const basePath = normalized.replace(/[?#].*$/, "").toLowerCase();
     if (
       !basePath.endsWith(".scss") &&
@@ -1042,7 +1042,22 @@
       return null;
     }
 
-    return buildFileInfo(value);
+    return buildFileInfo(normalized);
+  }
+
+  function normalizeStyleModulePath(value) {
+    const queryless = value.replace(/[?#].*$/, "");
+    if (!queryless.endsWith(".vue") || !/(?:\?|&)type=style/i.test(value)) {
+      return value;
+    }
+
+    const langMatch = value.match(/(?:\?|&)lang\.([a-z0-9_-]+)/i);
+    const extension = langMatch ? langMatch[1].toLowerCase() : "css";
+    if (!/^(css|scss|sass)$/.test(extension)) {
+      return value;
+    }
+
+    return queryless.replace(/\.vue$/i, "." + extension);
   }
 
   function describeVue3Instance(instance) {

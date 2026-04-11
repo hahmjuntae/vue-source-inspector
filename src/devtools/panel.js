@@ -219,6 +219,11 @@
       return;
     }
 
+    if (message.type === "VSI_PANEL_CLICK_SOURCE") {
+      clickSourceTile(message.sourceKey || "", message.filePath || "");
+      return;
+    }
+
     if (message.type === "VSI_PANEL_FOCUS_SOURCE") {
       if (message.sourceKey) {
         flashSourceHighlight(message.sourceKey);
@@ -860,6 +865,7 @@
     const button = document.createElement("button");
     button.type = "button";
     button.className = className;
+    button.dataset.sourceKey = getComponentKey(component);
     button.dataset.highlighted = String(getComponentKey(component) === state.highlightedSourceKey);
     button.disabled = !component || !component.file;
 
@@ -979,6 +985,22 @@
         renderSourceHighlights(buildSourceLayers(state.lastPayload));
       }
     }, 1400);
+  }
+
+  function clickSourceTile(sourceKey, fallbackFilePath) {
+    if (sourceKey) {
+      const buttons = elements.sourceHighlights.querySelectorAll("[data-source-key]");
+      for (const button of buttons) {
+        if (button.dataset.sourceKey === sourceKey && !button.disabled) {
+          button.click();
+          return;
+        }
+      }
+    }
+
+    if (fallbackFilePath) {
+      openInEditor(fallbackFilePath);
+    }
   }
 
   function inferProjectRoot(absoluteFile, displayFile) {
