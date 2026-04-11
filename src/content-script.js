@@ -20,6 +20,7 @@
     enabled: false,
     locked: false,
     theme: "light",
+    language: "en",
     editorKind: "vscode",
     inferredProjectRoot: "",
     rafId: 0,
@@ -35,6 +36,25 @@
     tooltipClose: null,
     tooltipBody: null,
     lastPayload: null
+  };
+
+  const messages = {
+    en: {
+      source: "Source",
+      nearest: "Nearest",
+      parent: "Parent",
+      page: "Page",
+      noSourceMetadata: "No Vue source metadata",
+      closeSourcePopup: "Close source popup"
+    },
+    ko: {
+      source: "소스",
+      nearest: "가장 가까운 컴포넌트",
+      parent: "부모 컴포넌트",
+      page: "페이지 엔트리",
+      noSourceMetadata: "노출된 Vue 소스 메타데이터가 없습니다",
+      closeSourcePopup: "소스 팝업 닫기"
+    }
   };
 
   chrome.runtime.onMessage.addListener(onRuntimeMessage);
@@ -83,6 +103,11 @@
 
     if (changes.vsiInferredProjectRoot) {
       state.inferredProjectRoot = normalizeProjectRoot(changes.vsiInferredProjectRoot.newValue);
+    }
+
+    if (changes.vsiLanguage) {
+      state.language = normalizeLanguage(changes.vsiLanguage.newValue);
+      applyLanguage();
     }
   }
 
@@ -355,13 +380,13 @@
 
     const label = document.createElement("div");
     label.className = "vsi-tooltip__label";
-    label.textContent = "Source";
+    label.textContent = tt("source");
 
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.className = "vsi-tooltip__close";
     closeButton.hidden = true;
-    closeButton.setAttribute("aria-label", "Close source popup");
+    closeButton.setAttribute("aria-label", tt("closeSourcePopup"));
     closeButton.innerHTML = [
       "<svg viewBox=\"0 0 20 20\" focusable=\"false\">",
       "<path d=\"M6 6l8 8M14 6l-8 8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>",
@@ -375,7 +400,7 @@
 
     const body = document.createElement("div");
     body.className = "vsi-tooltip__body";
-    body.textContent = "Hover a Vue-rendered element.";
+    body.textContent = tt("noSourceMetadata");
 
     header.append(label, closeButton);
     tooltip.append(header, body);
@@ -476,7 +501,7 @@
     if (!layers.length) {
       const empty = document.createElement("div");
       empty.className = "vsi-tooltip__empty";
-      empty.textContent = "No Vue source metadata";
+      empty.textContent = tt("noSourceMetadata");
       state.tooltipBody.appendChild(empty);
       return;
     }
@@ -533,15 +558,15 @@
     const layers = [];
     pushTooltipLayer(layers, payload && payload.nearestComponent, {
       key: "nearest",
-      label: "Nearest"
+      label: tt("nearest")
     });
     pushTooltipLayer(layers, payload && payload.parentComponent, {
       key: "parent",
-      label: "Parent"
+      label: tt("parent")
     });
     pushTooltipLayer(layers, payload && payload.pageComponent, {
       key: "page",
-      label: "Page"
+      label: tt("page")
     });
     return layers;
   }
@@ -686,11 +711,13 @@
   }
 
   async function restoreSettings() {
-    const stored = await chrome.storage.local.get(["vsiTheme", "vsiEditorKind"]);
+    const stored = await chrome.storage.local.get(["vsiTheme", "vsiEditorKind", "vsiLanguage"]);
     state.theme = normalizeTheme(stored.vsiTheme);
     state.editorKind = normalizeEditorKind(stored.vsiEditorKind);
+    state.language = normalizeLanguage(stored.vsiLanguage);
     state.inferredProjectRoot = normalizeProjectRoot(stored.vsiInferredProjectRoot);
     applyTheme();
+    applyLanguage();
   }
 
   function applyTheme() {
@@ -699,8 +726,33 @@
     }
   }
 
+  function applyLanguage() {
+    if (!state.tooltip) {
+      return;
+    }
+
+    const label = state.tooltip.querySelector(".vsi-tooltip__label");
+    if (label) {
+      label.textContent = tt("source");
+    }
+
+    if (state.tooltipClose) {
+      state.tooltipClose.setAttribute("aria-label", tt("closeSourcePopup"));
+    }
+
+    if (!state.lastPayload) {
+      renderTooltipLayers(null);
+    } else {
+      renderTooltipLayers(state.lastPayload);
+    }
+  }
+
   function normalizeTheme(value) {
     return value === "dark" ? "dark" : "light";
+  }
+
+  function normalizeLanguage(value) {
+    return value === "ko" ? "ko" : "en";
   }
 
   function normalizeEditorKind(value) {
@@ -714,5 +766,10 @@
 
     const normalized = value.trim().replaceAll("\\", "/");
     return normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
+  }
+
+  function tt(key) {
+    const lang = messages[state.language] ? state.language : "en";
+    return messages[lang][key] || messages.en[key] || key;
   }
 })();
