@@ -91,7 +91,7 @@
     });
   });
 
-  chrome.runtime.onMessage.addListener((message, sender) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message) {
       return;
     }
@@ -141,13 +141,20 @@
       sender.tab &&
       typeof sender.tab.id === "number"
     ) {
-      triggerEditorOpen(sender.tab.id, message.url || "").catch((error) => {
-        console.error("[VSI] Failed to trigger editor open from background", error);
-      });
-      postToTab(sender.tab.id, {
+      const panelPortCount = postToTab(sender.tab.id, {
         type: "VSI_PANEL_CLICK_SOURCE",
         filePath: message.filePath || "",
         sourceKey: message.sourceKey || ""
+      });
+      if (!panelPortCount && message.url) {
+        triggerEditorOpen(sender.tab.id, message.url).catch((error) => {
+          console.error("[VSI] Failed to trigger editor open from background", error);
+        });
+      }
+      sendResponse({
+        ok: true,
+        openedBy: panelPortCount ? "panel" : "direct-fallback",
+        panelPortCount
       });
       return;
     }
@@ -272,19 +279,25 @@
   function postToTab(tabId, message) {
     const ports = devtoolsPorts.get(tabId);
     if (!ports) {
-      return;
+      return 0;
     }
 
+    let deliveredCount = 0;
     for (const port of ports) {
-      postToPort(port, message);
+      if (postToPort(port, message)) {
+        deliveredCount += 1;
+      }
     }
+    return deliveredCount;
   }
 
   function postToPort(port, message) {
     try {
       port.postMessage(message);
+      return true;
     } catch (error) {
       console.error("[VSI] Failed to post to devtools port", error);
+      return false;
     }
   }
 
@@ -331,46 +344,4 @@
     });
   }
 
-  async function triggerEditorOpen(tabId, url) {
-    if (!url) {
-      return;
-    }
-
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      world: "MAIN",
-      func: (targetUrl) => {
-        try {
-          const anchor = document.createElement("a");
-          anchor.href = targetUrl;
-          anchor.rel = "noopener noreferrer";
-          anchor.style.display = "none";
-          document.documentElement.appendChild(anchor);
-          anchor.click();
-          anchor.remove();
-        } catch (_error) {
-          // Ignore anchor fallback errors.
-        }
-
-        try {
-          const frame = document.createElement("iframe");
-          frame.style.display = "none";
-          frame.src = targetUrl;
-          document.documentElement.appendChild(frame);
-          setTimeout(() => {
-            frame.remove();
-          }, 1200);
-        } catch (_error) {
-          // Ignore iframe fallback errors.
-        }
-
-        try {
-          window.location.assign(targetUrl);
-        } catch (_error) {
-          // Ignore location fallback errors.
-        }
-      },
-      args: [url]
-    });
-  }
 })();

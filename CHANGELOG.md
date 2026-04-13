@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Fixed on-page popup source clicks so they route through the DevTools panel open path and open the selected file only once.
+- Removed duplicate direct editor launch attempts from the popup to prevent repeated browser confirmation dialogs.
+- Hardened DevTools panel timers so panel teardown or reload no longer leaves invalidated timeout errors.
+
 ## 1.0.0
 
 - Finalized the core inspection workflow with layered `Nearest`, `Parent`, and `Page` source results in the DevTools panel.

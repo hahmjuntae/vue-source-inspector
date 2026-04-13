@@ -520,10 +520,11 @@
 
   function scheduleSettingsSave() {
     if (saveTimer) {
-      clearTimeout(saveTimer);
+      safeClearTimeout(saveTimer);
     }
 
-    saveTimer = setTimeout(() => {
+    saveTimer = safeSetTimeout(() => {
+      saveTimer = 0;
       chrome.storage.local
         .set({
           vsiEditorKind: state.settings.editorKind,
@@ -614,7 +615,7 @@
     );
     reconnectAttempts += 1;
 
-    reconnectTimer = setTimeout(() => {
+    reconnectTimer = safeSetTimeout(() => {
       reconnectTimer = 0;
       connectPort();
     }, delay);
@@ -625,7 +626,7 @@
       return;
     }
 
-    clearTimeout(reconnectTimer);
+    safeClearTimeout(reconnectTimer);
     reconnectTimer = 0;
   }
 
@@ -975,10 +976,10 @@
     }
 
     if (sourceHighlightTimer) {
-      clearTimeout(sourceHighlightTimer);
+      safeClearTimeout(sourceHighlightTimer);
     }
 
-    sourceHighlightTimer = setTimeout(() => {
+    sourceHighlightTimer = safeSetTimeout(() => {
       sourceHighlightTimer = 0;
       state.highlightedSourceKey = "";
       if (state.lastPayload) {
@@ -1000,6 +1001,22 @@
 
     if (fallbackFilePath) {
       openInEditor(fallbackFilePath);
+    }
+  }
+
+  function safeSetTimeout(callback, delay) {
+    try {
+      return setTimeout(callback, delay);
+    } catch (_error) {
+      return 0;
+    }
+  }
+
+  function safeClearTimeout(timerId) {
+    try {
+      clearTimeout(timerId);
+    } catch (_error) {
+      // Ignore DevTools context invalidation during panel teardown.
     }
   }
 

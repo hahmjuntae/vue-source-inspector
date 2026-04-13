@@ -16,7 +16,6 @@
 
   const REQUEST_EVENT = "__VSI_REQUEST_V2__";
   const RESPONSE_EVENT = "__VSI_RESPONSE_V2__";
-  const OPEN_EDITOR_EVENT = "__VSI_OPEN_EDITOR_V2__";
   const ROOT_ID = "vsi-root";
   const STYLE_ID = "vsi-style";
   const LOCK_UI_HIDE_DELAY_MS = 5000;
@@ -63,7 +62,8 @@
       parent: "Parent",
       page: "Page",
       noSourceMetadata: "No Vue source metadata",
-      closeSourcePopup: "Close source popup"
+      closeSourcePopup: "Close source popup",
+      opening: "Opening..."
     },
     ko: {
       source: "소스",
@@ -71,7 +71,8 @@
       parent: "부모 컴포넌트",
       page: "페이지 엔트리",
       noSourceMetadata: "노출된 Vue 소스 메타데이터가 없습니다",
-      closeSourcePopup: "소스 팝업 닫기"
+      closeSourcePopup: "소스 팝업 닫기",
+      opening: "여는 중..."
     }
   };
 
@@ -563,13 +564,10 @@
     for (const layer of layers) {
       const openPath = getTooltipOpenPath(layer.component);
       const isOpenable = Boolean(state.locked && openPath);
-      const item = document.createElement(isOpenable ? "a" : "button");
+      const item = document.createElement("button");
+      item.type = "button";
       item.className = "vsi-tooltip__item";
-      if (isOpenable) {
-        item.href = layer.target && layer.target.ok ? layer.target.url : "#";
-        item.rel = "noopener noreferrer";
-      } else {
-        item.type = "button";
+      if (!isOpenable) {
         item.disabled = true;
       }
 
@@ -592,28 +590,19 @@
       file.textContent = layer.component.file;
 
       if (isOpenable) {
-        item.addEventListener("mousedown", (event) => {
-          if (event.button !== 0) {
-            return;
-          }
-
-          if (layer.target && layer.target.ok) {
-            openEditorTargetFromPopup(layer.target);
-            requestEditorOpenInPage(layer.target.url || "");
-          }
-        });
-
         item.addEventListener("click", (event) => {
+          event.preventDefault();
           event.stopPropagation();
-          if (!layer.target || !layer.target.ok) {
-            event.preventDefault();
-          }
-
+          renderTooltipStatus(tt("opening"));
           safeRuntimeSendMessage({
             type: "VSI_OPEN_EDITOR_REQUEST",
             filePath: openPath,
             sourceKey: getTooltipSourceKey(layer.component),
             url: layer.target && layer.target.ok ? layer.target.url || "" : ""
+          }).then((response) => {
+            if (response && response.panelPortCount === 0) {
+              renderTooltipStatus(tt("opening"));
+            }
           });
 
           safeRuntimeSendMessage({
@@ -627,6 +616,17 @@
 
       item.append(meta, name, file);
       state.tooltipBody.appendChild(item);
+    }
+  }
+
+  function renderTooltipStatus(message) {
+    if (!state.tooltip) {
+      return;
+    }
+
+    const label = state.tooltip.querySelector(".vsi-tooltip__label");
+    if (label) {
+      label.textContent = message;
     }
   }
 
@@ -934,18 +934,28 @@
       return Promise.resolve();
     }
 
-    try {
-      return chrome.runtime.sendMessage(message).catch((error) => {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage(message, (response) => {
+          try {
+            const error = chrome.runtime.lastError;
+            if (error) {
+              handleContextInvalidation(error);
+              resolve(undefined);
+              return;
+            }
+          } catch (_error) {
+            // Ignore lastError reads during extension reload.
+          }
+          resolve(response);
+        });
+      } catch (error) {
         if (!handleContextInvalidation(error)) {
-          throw error;
+          console.warn("[VSI] Failed to send runtime message", error);
         }
-      });
-    } catch (error) {
-      if (!handleContextInvalidation(error)) {
-        throw error;
+        resolve(undefined);
       }
-      return Promise.resolve();
-    }
+    });
   }
 
   function safeRuntimeGetUrl(path) {
@@ -958,48 +968,6 @@
     } catch (error) {
       handleContextInvalidation(error);
       return "";
-    }
-  }
-
-  function requestEditorOpenInPage(url) {
-    if (!url) {
-      return;
-    }
-
-    try {
-      window.dispatchEvent(
-        new CustomEvent(OPEN_EDITOR_EVENT, {
-          detail: {
-            url
-          }
-        })
-      );
-    } catch (_error) {
-      // Ignore page-world dispatch failures and keep background fallback.
-    }
-  }
-
-  function openEditorTargetFromPopup(target) {
-    if (!target || !target.url) {
-      return;
-    }
-
-    try {
-      const anchor = document.createElement("a");
-      anchor.href = target.url;
-      anchor.rel = "noopener noreferrer";
-      anchor.style.display = "none";
-      document.documentElement.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-    } catch (_error) {
-      // Ignore direct anchor failures and continue with location fallback.
-    }
-
-    try {
-      window.location.href = target.url;
-    } catch (_error) {
-      // Ignore location fallback failures.
     }
   }
 
