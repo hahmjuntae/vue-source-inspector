@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+- Added copy buttons to each on-page popup source layer so developers can copy the resolved local absolute file path without opening the editor.
+- Kept popup copy actions separate from source opening to prevent accidental editor launches.
+
 ## 1.0.1
 
 - Fixed on-page popup source clicks so they route through the DevTools panel open path and open the selected file only once.

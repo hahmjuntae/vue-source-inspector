@@ -63,7 +63,9 @@
       page: "Page",
       noSourceMetadata: "No Vue source metadata",
       closeSourcePopup: "Close source popup",
-      opening: "Opening..."
+      opening: "Opening...",
+      copied: "Copied",
+      copyPath: "Copy absolute path"
     },
     ko: {
       source: "소스",
@@ -72,7 +74,9 @@
       page: "페이지 엔트리",
       noSourceMetadata: "노출된 Vue 소스 메타데이터가 없습니다",
       closeSourcePopup: "소스 팝업 닫기",
-      opening: "여는 중..."
+      opening: "여는 중...",
+      copied: "복사됨",
+      copyPath: "절대 경로 복사"
     }
   };
 
@@ -493,11 +497,16 @@
       ".vsi-tooltip__close svg { width: 14px; height: 14px; }",
       ".vsi-tooltip__body { display: grid; gap: 8px; }",
       ".vsi-tooltip__empty { font-size: 12px; line-height: 1.4; color: var(--vsi-tooltip-text); }",
-      ".vsi-tooltip__item { display: grid; gap: 4px; width: 100%; border: 0; padding: 8px 10px; border-radius: 10px; background: var(--vsi-tooltip-card); text-align: left; color: inherit; font: inherit; text-decoration: none; cursor: default; }",
+      ".vsi-tooltip__item { position: relative; display: grid; gap: 4px; width: 100%; border: 0; padding: 8px 42px 8px 10px; border-radius: 10px; background: var(--vsi-tooltip-card); text-align: left; color: inherit; font: inherit; text-decoration: none; cursor: default; }",
       ".vsi-tooltip__item:visited, .vsi-tooltip__item:hover, .vsi-tooltip__item:active { color: inherit; text-decoration: none; }",
       ".vsi-tooltip[data-locked='true'] .vsi-tooltip__item { cursor: pointer; }",
       ".vsi-tooltip[data-locked='true'] .vsi-tooltip__item:hover { background: rgba(0, 114, 245, 0.12); }",
       "#vsi-root[data-theme='dark'] .vsi-tooltip[data-locked='true'] .vsi-tooltip__item:hover { background: rgba(106, 169, 255, 0.12); }",
+      ".vsi-tooltip__copy { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border: 0; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.74); color: var(--vsi-tooltip-muted); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08); cursor: pointer; }",
+      ".vsi-tooltip__copy:hover { color: var(--vsi-tooltip-text); background: rgba(0, 114, 245, 0.1); }",
+      ".vsi-tooltip__copy svg { width: 14px; height: 14px; }",
+      "#vsi-root[data-theme='dark'] .vsi-tooltip__copy { background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }",
+      "#vsi-root[data-theme='dark'] .vsi-tooltip__copy:hover { background: rgba(106, 169, 255, 0.14); }",
       ".vsi-tooltip__meta { display: flex; flex-wrap: wrap; gap: 6px; }",
       ".vsi-tooltip__badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 8px; font-size: 11px; font-weight: 500; line-height: 1; letter-spacing: 0; }",
       ".vsi-tooltip__badge--nearest { background: rgba(0, 114, 245, 0.12); color: #005ad1; }",
@@ -564,11 +573,14 @@
     for (const layer of layers) {
       const openPath = getTooltipOpenPath(layer.component);
       const isOpenable = Boolean(state.locked && openPath);
-      const item = document.createElement("button");
-      item.type = "button";
+      const copyPath = getTooltipCopyPath(layer);
+      const item = document.createElement("div");
       item.className = "vsi-tooltip__item";
+      item.setAttribute("role", "button");
       if (!isOpenable) {
-        item.disabled = true;
+        item.setAttribute("aria-disabled", "true");
+      } else {
+        item.tabIndex = 0;
       }
 
       const meta = document.createElement("div");
@@ -588,6 +600,30 @@
       const file = document.createElement("div");
       file.className = "vsi-tooltip__file";
       file.textContent = layer.component.file;
+
+      if (copyPath) {
+        const copyButton = document.createElement("button");
+        copyButton.type = "button";
+        copyButton.className = "vsi-tooltip__copy";
+        copyButton.setAttribute("aria-label", tt("copyPath"));
+        copyButton.title = tt("copyPath");
+        copyButton.innerHTML = [
+          "<svg viewBox=\"0 0 20 20\" focusable=\"false\">",
+          "<path d=\"M7 3.75A1.75 1.75 0 0 1 8.75 2h6.5A1.75 1.75 0 0 1 17 3.75v6.5A1.75 1.75 0 0 1 15.25 12h-6.5A1.75 1.75 0 0 1 7 10.25v-6.5Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/>",
+          "<path d=\"M4.75 8A1.75 1.75 0 0 0 3 9.75v6.5A1.75 1.75 0 0 0 4.75 18h6.5A1.75 1.75 0 0 0 13 16.25\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/>",
+          "</svg>"
+        ].join("");
+        copyButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          copyTextToClipboard(copyPath).then((copied) => {
+            if (copied) {
+              renderTooltipStatus(tt("copied"));
+            }
+          });
+        });
+        item.appendChild(copyButton);
+      }
 
       if (isOpenable) {
         item.addEventListener("click", (event) => {
@@ -683,6 +719,18 @@
     }
 
     return component.absoluteFile || component.file || "";
+  }
+
+  function getTooltipCopyPath(layer) {
+    if (!layer || !layer.component) {
+      return "";
+    }
+
+    if (layer.target && layer.target.ok && layer.target.absolutePath) {
+      return layer.target.absolutePath;
+    }
+
+    return layer.component.absoluteFile || layer.component.file || "";
   }
 
   function getTooltipSourceKey(component) {
@@ -968,6 +1016,37 @@
     } catch (error) {
       handleContextInvalidation(error);
       return "";
+    }
+  }
+
+  async function copyTextToClipboard(text) {
+    if (!text) {
+      return false;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_error) {
+      return copyTextWithFallback(text);
+    }
+  }
+
+  function copyTextWithFallback(text) {
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "true");
+      textarea.style.position = "fixed";
+      textarea.style.top = "-1000px";
+      textarea.style.left = "-1000px";
+      document.documentElement.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand("copy");
+      textarea.remove();
+      return Boolean(copied);
+    } catch (_error) {
+      return false;
     }
   }
 

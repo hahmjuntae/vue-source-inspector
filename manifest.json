@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Vue Source Inspector",
   "description": "Inspect Vue component source and related styles directly from Chrome DevTools.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "permissions": [
     "scripting",
     "storage"
