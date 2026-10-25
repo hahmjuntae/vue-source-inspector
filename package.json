@@ -2,7 +2,7 @@
   "name": "vue-source-inspector-extension",
   "private": true,
   "version": "1.0.2",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "description": "Chrome DevTools extension for tracing Vue DOM nodes to source files and related styles.",
   "scripts": {
     "lint": "node scripts/verify.js",
